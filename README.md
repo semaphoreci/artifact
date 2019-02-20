@@ -38,6 +38,7 @@ Expires - deletes the files or directories after amount of time specified.
 
 Supported options are:
 - just integer (number of seconds)
+- `Nh` for N hours
 - `Nd` for N days
 - `Nw` for N weeks
 - `Nm` for N months
@@ -54,3 +55,18 @@ TODO
 - Linux, macOS: `~/.artifact/credentials`
 - Windows: `dir "%UserProfile%\.artifact\credentials"`
 
+## Putting artifacts into artifact store on different levels
+
+Other supported levels include `pipeline`, `workflow` and `project` level. These are variations of the command depending on the level:
+
+#### `artifact put pipeline x.zip`
+
+File is stored into `/artifacts/pipelines/<SEMAPHORE_PIPELINE_ID>/x.zip`
+
+#### `artifact put workflow x.zip`
+
+File is stored into `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip`
+
+#### `artifact put projects x.zip`
+
+File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip`
