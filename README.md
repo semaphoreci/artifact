@@ -1,8 +1,6 @@
 # Artifact
 
-## Levels
-
-### Job
+## put
 
 #### `artifact put x.zip`
 
@@ -55,7 +53,7 @@ TODO
 - Linux, macOS: `~/.artifact/credentials`
 - Windows: `dir "%UserProfile%\.artifact\credentials"`
 
-## Putting artifacts into artifact store on different levels
+### Putting artifacts into artifact store on different levels
 
 Other supported levels include `pipeline`, `workflow` and `project` level. These are variations of the command depending on the level:
 
