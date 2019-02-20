@@ -43,12 +43,14 @@ Supported options are:
 - `Nm` for N months
 - `Ny` for N years
 
-If epires flag is not set artifact never expires.
+If expires flag is not set artifact never expires.
 
 ##### Output
 
+TODO
+
 ##### Requirements
-- SEMAPHORE_JOB_ID
+- SEMAPHORE_JOB_ID (not required if `--job` flag is specified)
 - Linux, macOS: `~/.artifact/credentials`
 - Windows: `dir "%UserProfile%\.artifact\credentials"`
 
