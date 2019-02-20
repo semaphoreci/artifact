@@ -68,3 +68,38 @@ File is stored into `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip`
 #### `artifact put projects x.zip`
 
 File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip`
+
+## get
+
+#### `sem get x.zip`
+
+##### Description
+
+Artifact stored at `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip` will be put at current directory as `x.zip`.
+
+##### Alternative forms and flags
+
+3. `--job <job-id>` or `-j <job-id>`
+
+By default command is looking for `SEMAPHORE_JOB_ID` env var. If it's not available it fails. If flag `--job` is specified it takes precedence over `SEMAPHORE_JOB_ID`.
+
+##### Requirements
+- SEMAPHORE_JOB_ID (not required if `--job` flag is specified)
+- Linux, macOS: `~/.artifact/credentials`
+- Windows: `dir "%UserProfile%\.artifact\credentials"`
+
+### Putting artifacts into artifact store on different levels
+
+Other supported levels include `pipeline`, `workflow` and `project` level. These are variations of the command depending on the level:
+
+#### `artifact get pipeline x.zip`
+
+File is stored at `/artifacts/pipelines/<SEMAPHORE_PIPELINE_ID>/x.zip` would be restored at current directory as `x.zip`.
+
+#### `artifact get workflow x.zip`
+
+File is stored into `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip` would be restored at current directory as `x.zip`.
+
+#### `artifact get projects x.zip`
+
+File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip` would be restored at current directory as `x.zip`.
