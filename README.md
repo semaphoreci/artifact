@@ -79,7 +79,9 @@ Artifact stored at `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip` will be put at cur
 
 ##### Alternative forms and flags
 
-3. `--job <job-id>` or `-j <job-id>`
+1. `artifact get job x.zip` is alias for `artifact get x.zip`
+
+2. `--job <job-id>` or `-j <job-id>`
 
 By default command is looking for `SEMAPHORE_JOB_ID` env var. If it's not available it fails. If flag `--job` is specified it takes precedence over `SEMAPHORE_JOB_ID`.
 
