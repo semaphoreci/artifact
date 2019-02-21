@@ -79,7 +79,7 @@ File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip`
 
 ## get
 
-#### `sem get x.zip`
+#### `artifact get x.zip`
 
 ##### Description
 
@@ -116,14 +116,16 @@ File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip` would be 
 
 ## get
 
-#### `sem list`
+#### `artifact list`
 
 ##### Description
 
-`sem list job` list root of the job directory `/artifacts/jobs/<SEMAPHORE_JOB_ID>/`
+`artifact list` lists root of the job directory `/artifacts/jobs/<SEMAPHORE_JOB_ID>/`
 
-`sem list pipeline` list root of the job directory `/artifacts/pipelines/<SEMAPHORE_PIPELINE_ID>/`
+`artifact list job` lists root of the job directory `/artifacts/jobs/<SEMAPHORE_JOB_ID>/`
 
-`sem list workflow` list root of the job directory `/artifacts/workflows/<SEMAPHORE_PIPELINE_ID>/`
+`artifact list pipeline` lists root of the job directory `/artifacts/pipelines/<SEMAPHORE_PIPELINE_ID>/`
 
-`sem list project` list root of the job directory `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/`
+`artifact list workflow` lists root of the job directory `/artifacts/workflows/<SEMAPHORE_PIPELINE_ID>/`
+
+`artifact list project` lists root of the job directory `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/`
