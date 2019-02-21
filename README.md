@@ -73,7 +73,7 @@ File is stored into `/artifacts/pipelines/<SEMAPHORE_PIPELINE_ID>/x.zip`
 
 File is stored into `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip`
 
-#### `artifact put projects x.zip`
+#### `artifact put project x.zip`
 
 File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip`
 
