@@ -1,5 +1,13 @@
 # Artifact
 
+Table of contents
+
+- [put](#put)
+- [get](#get)
+- [list](#list)
+- [delete](#delete)
+- [exists](#exists)
+
 ## put
 
 #### `artifact put x.zip`
@@ -105,3 +113,17 @@ File is stored into `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip` would b
 #### `artifact get projects x.zip`
 
 File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip` would be restored at current directory as `x.zip`.
+
+## get
+
+#### `sem list`
+
+##### Description
+
+`sem list job` list root of the job directory `/artifacts/jobs/<SEMAPHORE_JOB_ID>/`
+
+`sem list pipeline` list root of the job directory `/artifacts/pipelines/<SEMAPHORE_PIPELINE_ID>/`
+
+`sem list workflow` list root of the job directory `/artifacts/workflows/<SEMAPHORE_PIPELINE_ID>/`
+
+`sem list project` list root of the job directory `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/`
