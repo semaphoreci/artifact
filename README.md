@@ -23,7 +23,9 @@
 
 Artifacts can be stored on various hierarchical lavels of your CI/CD process.
 
-- Job - when uploading artifacts this is deafult level. Artifacts stored on this level can be inspected through the UI by joing to a job page in the UI.
+### Job 
+
+When uploading artifacts this is deafult level. Artifacts stored on this level can be inspected through the UI by joing to a job page in the UI.
 
 Upload artifact in job with `artifact` CLI:
 
