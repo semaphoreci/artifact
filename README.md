@@ -50,6 +50,13 @@ Implementation notes:
 - artifact store is backed by a S3 bucket or compatible store.
 - Uploading same file or directory that already exists will fail. Use `--force` or `-f` flag to overwrite it.
 
+### Pipeline level artifacts
+
+Storing artifacts on the pipeline level is best used when you need to work with artifacts produced within one block in other blocks within same pipeline, but you don't need those artifacts in other pipelines that you can have within same workflow.
+
+
+## CLI
+
 ## put
 
 #### `artifact put x.zip`
