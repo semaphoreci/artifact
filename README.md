@@ -15,13 +15,118 @@
 
 ## Use-cases
 
-1. Arhiving artifacts - by default artifacts are kept forever however you can specify expiration policy or delete them manually
+1. Arhiving artifacts - storing final deliverables
 2. Promoting artifacts though pipeline and workflow
 3. Debugging - Store and inspect logs, screenshots and other debug data through UI or CLI
 
 ## Concepts
 
-Artifacts can be stored on various hierarchical lavels of your CI/CD process.
+### Big picture
+
+Artifacts can stored and accessed on four different layers. This concept makes it easy to use artifacts for different purposes with very simple commands.
+
+Artifact stores:
+
+- **Project** - static, one per project
+- **Workflow** - dynamic, nasted under current workflow
+- **Pipeline** - dynamic, nasted under current pipeline
+- **Job** - dynamic, nasted under current job
+
+
+### Project level
+
+**Use-case** - Storing final deliverables
+
+This is static level. It's an artifact store that is per project and it's possible to simply upload/download files and directories from this level from every job from any workflow and pipeline. Here is an example how you can interect with project level store from any job in your pipeline or from your local development environemnt.
+	
+From any jobs running on Semaphore:
+	
+```yaml
+artifact project put myapp-v3.tar
+artifact project get myapp-v3.tar
+```
+	
+From your development environment:
+	
+```sh
+sem artifact project put --project payment-api myapp-v3.tar
+sem artifact project get -p payment-api myapp-v3.tar
+```
+	
+You can also view and download your artifacts from project page in the UI.
+
+
+### Workflow level
+
+**Use-case** - Promoting build artifacts accross pipelines. e.g. promoting from _Build and test_ pipeline into _Production deployment pipeline_.
+
+This is dynamic level. New store is created for each new workflow. Here are examples for interacting with this store from any pipeline and any job within workflow.
+	
+From any jobs running on Semaphore:
+	
+```yaml
+artifact workflow put myapp-v3.tar
+artifact workflow get myapp-v3.tar
+```
+	
+From your development environment:
+	
+```sh
+sem artifact workflow put --workflow <WORKFLOW_ID> myapp-v3.tar
+sem artifact workflow get -w <WORKFLOW_ID> myapp-v3.tar
+```
+	
+You can also view and download artifacts from workflow page in the UI.
+
+### Pipeline level
+
+**Use-case** - Promoting build artifacts accross blocks within same pipeline. e.g. Promoting binary compiled in the first block into unit test and integration tests blocks.
+
+This is dynamic level. New store is created for each new pipeline. Here are examples for interacting with this store from any job within pipeline.
+	
+From any jobs running on Semaphore:
+	
+```yaml
+artifact pipeline put myapp-v3.tar
+artifact pipeline get myapp-v3.tar
+```
+	
+From your development environment:
+	
+```sh
+sem artifact pipeline put --pipeline <PIPELINE_ID> myapp-v3.tar
+sem artifact pipeline get -p <PIPELINE_ID> myapp-v3.tar
+```
+
+You can also view and download artifacts from pipeline on the workflow page in the UI.
+
+### Job level
+
+**Use-case** - Debugging jobs with easy access to artifacts that job created. e.g. Storing logs, screenshots, core dumps and inspecting them them on the job page.
+
+This is dynamic level. New store is created for each new pipeline. Here are examples for interacting with this store from any job within pipeline.
+	
+From any jobs running on Semaphore:
+	
+```yaml
+artifact put logs/build.log
+artifact get logs/build.log
+```
+	
+From your development environment:
+	
+```sh
+sem artifact put --job <JOB_ID> logs/build.log
+sem artifact get -p <JOB_ID> logs/build.log
+```
+
+You can also view and download artifacts on the job page in the UI.
+
+---
+---
+# Don't read below this point - 🐉s & 🐍s.
+---
+---
 
 ### Job level artifacts
 
