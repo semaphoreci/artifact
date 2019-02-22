@@ -104,9 +104,9 @@ You can also view and download artifacts from pipeline on the workflow page in t
 
 **Use-case** - Debugging jobs with easy access to artifacts that job created. e.g. Storing logs, screenshots, core dumps and inspecting them them on the job page.
 
-This is dynamic level. New store is created for each new pipeline. Here are examples for interacting with this store from any job within pipeline.
+This is dynamic level. New store is created for each new job. Here are examples for interacting with this store from job.
 	
-From any jobs running on Semaphore:
+From job running on Semaphore:
 	
 ```yaml
 artifact put logs/build.log
