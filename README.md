@@ -29,7 +29,6 @@ Artifact stores:
 
 - **Project** - static, one per project
 - **Workflow** - dynamic, nasted under current workflow
-- **Pipeline** - dynamic, nasted under current pipeline
 - **Job** - dynamic, nasted under current job
 
 
@@ -77,28 +76,6 @@ sem artifact workflow get -w <WORKFLOW_ID> myapp-v3.tar
 ```
 	
 You can also view and download artifacts from workflow page in the UI.
-
-### Pipeline level
-
-**Use-case** - Promoting build artifacts accross blocks within same pipeline. e.g. Promoting binary compiled in the first block into unit test and integration tests blocks.
-
-This is dynamic level. New store is created for each new pipeline. Here are examples for interacting with this store from any job within pipeline.
-	
-From any jobs running on Semaphore:
-	
-```yaml
-artifact pipeline put myapp-v3.tar
-artifact pipeline get myapp-v3.tar
-```
-	
-From your development environment:
-	
-```sh
-sem artifact pipeline put --pipeline <PIPELINE_ID> myapp-v3.tar
-sem artifact pipeline get -p <PIPELINE_ID> myapp-v3.tar
-```
-
-You can also view and download artifacts from pipeline on the workflow page in the UI.
 
 ### Job level
 
@@ -298,10 +275,6 @@ TODO
 
 Other supported levels include `pipeline`, `workflow` and `project` level. These are variations of the command depending on the level:
 
-#### `artifact put pipeline x.zip`
-
-File is stored into `/artifacts/pipelines/<SEMAPHORE_PIPELINE_ID>/x.zip`
-
 #### `artifact put workflow x.zip`
 
 File is stored into `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip`
@@ -333,11 +306,7 @@ By default command is looking for `SEMAPHORE_JOB_ID` env var. If it's not availa
 
 ### Putting artifacts into artifact store on different levels
 
-Other supported levels include `pipeline`, `workflow` and `project` level. These are variations of the command depending on the level:
-
-#### `artifact get pipeline x.zip`
-
-File is stored at `/artifacts/pipelines/<SEMAPHORE_PIPELINE_ID>/x.zip` would be restored at current directory as `x.zip`.
+Other supported levels include `workflow` and `project` level. These are variations of the command depending on the level:
 
 #### `artifact get workflow x.zip`
 
@@ -357,8 +326,6 @@ File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip` would be 
 
 `artifact list job` lists root of the job directory `/artifacts/jobs/<SEMAPHORE_JOB_ID>/`
 
-`artifact list pipeline` lists root of the job directory `/artifacts/pipelines/<SEMAPHORE_PIPELINE_ID>/`
-
-`artifact list workflow` lists root of the job directory `/artifacts/workflows/<SEMAPHORE_PIPELINE_ID>/`
+`artifact list workflow` lists root of the job directory `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/`
 
 `artifact list project` lists root of the job directory `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/`
