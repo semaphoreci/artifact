@@ -57,7 +57,7 @@ You can also view and download your artifacts from project page in the UI.
 
 ### Workflow level
 
-**Use-case** - Promoting build artifacts accross pipelines. e.g. promoting from _Build and test_ pipeline into _Production deployment pipeline_.
+**Use-case** - Promoting build artifacts accross pipelines and block levels. e.g. promoting from _Build and test_ pipeline into _Production deployment pipeline_.
 
 This is dynamic level. New store is created for each new workflow. Here are examples for interacting with this store from any pipeline and any job within workflow.
 	
