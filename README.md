@@ -23,7 +23,7 @@
 
 ### Big picture
 
-Artifacts can be stored and accessed on four different layers. This concept makes it easy to use artifacts for different purposes with very simple commands.
+Artifacts can be stored and accessed on three different layers. This concept makes it easy to use artifacts for different purposes with very simple commands.
 
 Artifact stores:
 
