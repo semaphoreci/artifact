@@ -40,16 +40,16 @@ This is static level. It's an artifact store that is per project and it's possib
 
 From any jobs running on Semaphore:
 
-```yaml
-artifact project push myapp-v3.tar
-artifact project pull myapp-v3.tar
+```sh
+artifact push project myapp-v3.tar
+artifact pull project myapp-v3.tar
 ```
 
 From your development environment:
 
 ```sh
-sem artifact project push --project payment-api myapp-v3.tar
-sem artifact project pull -p payment-api myapp-v3.tar
+sem artifact push project --project payment-api myapp-v3.tar
+sem artifact pull project -p payment-api myapp-v3.tar
 ```
 
 You can also view and download your artifacts from project page in the UI.
@@ -63,16 +63,16 @@ This is dynamic level. New store is created for each new workflow. Here are exam
 
 From any jobs running on Semaphore:
 
-```yaml
-artifact workflow push myapp-v3.tar
-artifact workflow pull myapp-v3.tar
+```sh
+artifact push workflow myapp-v3.tar
+artifact pull workflow myapp-v3.tar
 ```
 
 From your development environment:
 
 ```sh
-sem artifact workflow push --workflow <WORKFLOW_ID> myapp-v3.tar
-sem artifact workflow pull -w <WORKFLOW_ID> myapp-v3.tar
+sem artifact push workflow --workflow <WORKFLOW_ID> myapp-v3.tar
+sem artifact pull workflow -w <WORKFLOW_ID> myapp-v3.tar
 ```
 
 You can also view and download artifacts from workflow page in the UI.
@@ -85,16 +85,16 @@ This is dynamic level. New store is created for each new job. Here are examples 
 
 From job running on Semaphore:
 
-```yaml
-artifact push logs/build.log
-artifact pull logs/build.log
+```sh
+artifact push job logs/build.log
+artifact pull job logs/build.log
 ```
 
 From your development environment:
 
 ```sh
-sem artifact push --job <JOB_ID> logs/build.log
-sem artifact pull -p <JOB_ID> logs/build.log
+sem artifact push job --job <JOB_ID> logs/build.log
+sem artifact pull job -p <JOB_ID> logs/build.log
 ```
 
 You can also view and download artifacts on the job page in the UI.
