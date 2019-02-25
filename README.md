@@ -23,16 +23,16 @@ Artifacts can be stored and accessed on three different layers. This concept mak
 
 Artifact stores:
 
-- **Project** - static, one per project
-- **Workflow** - dynamic, nasted under current workflow
-- **Job** - dynamic, nasted under current job
+- **Project** - one per project
+- **Workflow** - nasted under current workflow
+- **Job** - nasted under current job
 
 
 ### Project level
 
 **Use-case** - Storing final deliverables
 
-This is static level. It's an artifact store that is per project and it's possible to simply upload/download files and directories from this level from every job from any workflow and pipeline. Here is an example how you can interect with project level store from any job in your pipeline or from your local development environemnt.
+It's an artifact store that is per project and it's possible to simply upload/download files and directories from this level from every job from any workflow and pipeline. Here is an example how you can interect with project level store from any job in your pipeline or from your local development environemnt.
 
 From any jobs running on Semaphore:
 
@@ -55,7 +55,7 @@ You can also view and download your artifacts from project page in the UI.
 
 **Use-case** - Promoting build artifacts accross pipelines and block levels. e.g. promoting from _Build and test_ pipeline into _Production deployment pipeline_.
 
-This is dynamic level. New store is created for each new workflow. Here are examples for interacting with this store from any pipeline and any job within workflow.
+New store is created for each new workflow. Here are examples for interacting with this store from any pipeline and any job within workflow.
 
 From any jobs running on Semaphore:
 
@@ -77,7 +77,7 @@ You can also view and download artifacts from workflow page in the UI.
 
 **Use-case** - Debugging jobs with easy access to artifacts that job created. e.g. Storing logs, screenshots, core dumps and inspecting them them on the job page.
 
-This is dynamic level. New store is created for each new job. Here are examples for interacting with this store from job.
+New store is created for each new job. Here are examples for interacting with this store from job.
 
 From job running on Semaphore:
 
