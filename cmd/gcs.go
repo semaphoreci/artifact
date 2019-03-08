@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"path"
+	"path/filepath"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -13,67 +15,84 @@ import (
 )
 
 var (
-	ctx        = context.Background()
-	bucketName string
-	bucket     *storage.BucketHandle
-	gcsConf    GcsConfig
+	ctx    = context.Background()
+	bucket *storage.BucketHandle
 )
-
-// GcsConfig contains config options related to Google Cloud Storage.
-type GcsConfig struct {
-	PrivateKey  string `json:"private_key"`
-	ClientEmail string `json:"client_email"`
-}
 
 // initGCS initializes Google Coud Storage with the given bucket name.
 // Loads credentials from environment variable.
-func initGCS(bName string) error {
-	bucketName = bName
+func initGCS() error {
 	credFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
-	f, err := os.Open(credFile)
-	if err != nil {
-		return fmt.Errorf("Failed to open Google Cloud Storage credentials file: %s", err)
-	}
-	defer f.Close()
-
-	d := json.NewDecoder(f)
-	if err = d.Decode(&gcsConf); err != nil {
-		return fmt.Errorf("Failed to decode Google Cloud Storage credentials file: %s", err)
-	}
 
 	client, err := storage.NewClient(ctx, option.WithCredentialsFile(credFile))
 	if err != nil {
 		return fmt.Errorf("Failed to create Google Cloud Storage client: %s", err)
 	}
 
+	bucketName := os.Getenv("BUCKET_NAME")
 	bucket = client.Bucket(bucketName)
 	return nil
 }
 
-// signedurlGCS creates a signed, expirable url to a Google Cloud Storage Object.
-func signedurlGCS(filename, method string, expires time.Time) (url string, err error) {
-	if url, err = storage.SignedURL(bucketName, filename, &storage.SignedURLOptions{
-		GoogleAccessID: gcsConf.ClientEmail,
-		PrivateKey:     []byte(gcsConf.PrivateKey),
-		Method:         method,
-		Expires:        expires,
-	}); err != nil {
-		err = fmt.Errorf("Failed to create Google Cloud Storage signed url: %s", err)
-	}
-	return
-}
-
-// writeGCS uploads a file from the file system to Google Cloud Storage with given destination
+// pushFileGCS uploads a file from the file system to Google Cloud Storage with given destination
 // path and name, and human readable expire string.
-func writeGCS(dstDir, dstFilename, srcFilename, expires string) error {
-	expTime, err := utils.ParseRelativeAgeForHumans
+func pushFileGCS(dstDir, dstFilename, srcFilename, expires string) error {
+	expTime, err := utils.ParseRelativeAgeForHumans(expires)
 	if err != nil {
 		return err
 	}
-	if expTime == -1 {
-		// TODO: create non-expire object, and upload file
-	} else {
-		// TODO: create expire signed url, and upload file
+	if len(dstFilename) == 0 {
+		dstFilename = filepath.Base(srcFilename)
 	}
+	var f *os.File
+	if f, err = os.Open(srcFilename); err != nil {
+		return err
+	}
+	defer f.Close()
+	return writeGCS(path.Join(dstDir, dstFilename), f, expTime)
+}
+
+// pullFileGCS downloads a file from the Google Cloud Storage to the file system with given source
+// path and name.
+func pullFileGCS(dstDir, dstFilename, srcFilename string) (err error) {
+	if len(dstFilename) == 0 {
+		dstFilename = filepath.Base(srcFilename)
+	}
+	var f *os.File
+	if f, err = os.Create(srcFilename); err != nil {
+		return
+	}
+	defer f.Close()
+	return readGCS(f, path.Join(dstDir, dstFilename))
+}
+
+func yankFileGCS(dir, filename string) error {
+	// TODO
+	return nil
+}
+
+// writeGCS uploads a file from an io Reader to Google Cloud Storage with given destination
+// path and name, and an expiration duration.
+func writeGCS(dstFilename string, srcReader io.Reader, expires time.Duration) error {
+	w := bucket.Object(dstFilename).NewWriter(ctx)
+	defer w.Close()
+	_, err := io.Copy(w, srcReader)
+	// TODO: set expire
+	return err
+}
+
+// readGCS downloads a file to an io Writer from Google Cloud Storage with given source
+// path and name.
+func readGCS(dstWriter io.Writer, srcFilename string) error {
+	r, err := bucket.Object(srcFilename).NewReader(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(dstWriter, r)
+	return err
+}
+
+// delGCS deletes a file from the Google Cloud Storage with a given name.
+func delGCS(filename string) error {
+	return bucket.Object(filename).Delete(ctx)
 }

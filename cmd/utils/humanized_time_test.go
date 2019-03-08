@@ -32,6 +32,8 @@ func TestParseRelativeAgeForHumans(t *testing.T) {
 	testParseRelativeAgeForHumans("1h0", 0, true)
 	testParseRelativeAgeForHumans("h", 0, true)
 	testParseRelativeAgeForHumans("hw", 0, true)
+	testParseRelativeAgeForHumans("1s", 0, true)
+	testParseRelativeAgeForHumans("1a", 0, true)
 	testParseRelativeAgeForHumans("1h", time.Hour, false)
 	testParseRelativeAgeForHumans("10h", 10*time.Hour, false)
 	testParseRelativeAgeForHumans("1000h", 1000*time.Hour, false)

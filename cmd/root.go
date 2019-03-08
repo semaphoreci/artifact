@@ -44,7 +44,7 @@ func init() {
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.artifact.yaml)")
 
-	err := initGCS(viper.GetString("bucket_name"))
+	err := initGCS()
 	utils.Check(err)
 }
 
