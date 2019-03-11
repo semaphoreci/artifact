@@ -131,7 +131,9 @@ End result for both examples above: `/tmp/testxyz`
 
 `artifact push job x.zip -d y.zip` pushs file into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/y.zip`.
 
-`artifact push job logs/webserver --destination debuglogs` pushs all sub-dirs and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/debuglogs`.
+Example for directory: `artifact push job logs/webserver --destination debuglogs` pushs all sub-dirs and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/debuglogs`.
+
+Example for deeply nested directory as destination: `artifact push job logs/webserver --destination path/to/debuglogs` pushs all sub-dirs and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/path/to/debuglogs`.
 
 2. `--job <job-id>` or `-j <job-id>`
 
