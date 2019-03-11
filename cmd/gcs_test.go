@@ -103,6 +103,10 @@ func TestGCS(t *testing.T) {
 
 	// TODO: test expire when it's implemented
 
+	if err = writeGCS(filename, bytes.NewReader(content), time.Second*10); err == nil {
+		t.Fatalf("would be able to overwrite object in Google Cloud Storage")
+	}
+
 	var b bytes.Buffer
 	writer := bufio.NewWriter(&b)
 	if err = readGCS(writer, filename); err != nil {

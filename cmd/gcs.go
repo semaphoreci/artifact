@@ -93,10 +93,13 @@ func yankFileGCS(category, filename string) (string, error) {
 // path and name, and an expiration duration.
 func writeGCS(dstFilename string, srcReader io.Reader, expires time.Duration) error {
 	o := bucket.Object(dstFilename)
-	// TODO: check if already exists
+	_, err := o.Attrs(ctx)
+	if err != storage.ErrObjectNotExist {
+		return fmt.Errorf("The file '%s' already exists in the Google Cloud Storage", dstFilename)
+	}
 	w := o.NewWriter(ctx)
 	defer w.Close()
-	_, err := io.Copy(w, srcReader)
+	_, err = io.Copy(w, srcReader)
 	// TODO: set expire
 	return err
 }
