@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -32,6 +33,15 @@ func initGCS() error {
 	return nil
 }
 
+// pushPaths returns source and destination paths to push a file to Google Cloud Storage.
+// Source path becomes a relative path on the file system, destination path becomes a category
+// prefixed path to the GCS Bucket.
+func pushPaths(category, dstFilename, srcFilename string) (dstPath, srcPath string) {
+	srcFilename = utils.ToRelative(srcFilename)
+	dstFilename = utils.PrefixedPathFromSource(category, dstFilename, srcFilename)
+	return dstFilename, srcFilename
+}
+
 // pushFileGCS uploads a file from the file system to Google Cloud Storage with given category,
 // destination name, and human readable expire string.
 func pushFileGCS(category, dstFilename, srcFilename, expires string) error {
@@ -39,32 +49,43 @@ func pushFileGCS(category, dstFilename, srcFilename, expires string) error {
 	if err != nil {
 		return err
 	}
+	dstFilename, srcFilename = pushPaths(category, dstFilename, srcFilename)
 	var f *os.File
 	if f, err = os.Open(srcFilename); err != nil {
-		return err
+		return fmt.Errorf("Failed to open file for pushing to Google Cloud Storage: %s", err)
 	}
 	defer f.Close()
-	dstFilename = utils.PrefixedPathFromSource(category, dstFilename, srcFilename)
 	return writeGCS(dstFilename, f, expTime)
+}
+
+// pullPaths returns source and destination paths to pull a file from Google Cloud Storage.
+// Source path becomes a category prefixed path to the GCS Bucket,
+// destination path becomes a relative path on the file system.
+func pullPaths(category, dstFilename, srcFilename string) (dstPath, srcPath string) {
+	dstFilename = utils.ToRelative(utils.PathFromSource(dstFilename, srcFilename))
+	srcFilename = utils.PrefixedPath(category, srcFilename)
+	return dstFilename, srcFilename
 }
 
 // pullFileGCS downloads a file from the Google Cloud Storage to the file system with given category,
 // and source path.
 func pullFileGCS(category, dstFilename, srcFilename string) (err error) {
-	dstFilename = utils.PrefixedPath(dstFilename, srcFilename)
+	dstFilename, srcFilename = pullPaths(category, dstFilename, srcFilename)
+	if err = os.MkdirAll(filepath.Dir(dstFilename), 0755); err != nil {
+		return fmt.Errorf("Failed to create result dir for pulling from Google Cloud Storage: %s", err)
+	}
 	var f *os.File
 	if f, err = os.Create(dstFilename); err != nil {
-		return
+		return fmt.Errorf("Failed to create result file for pulling from Google Cloud Storage: %s", err)
 	}
 	defer f.Close()
-	prefixedSrcFilename := utils.PrefixedPath(category, srcFilename)
-	return readGCS(f, prefixedSrcFilename)
+	return readGCS(f, srcFilename)
 }
 
 // yankFileGCS deletes a file from the Google Cloud Storage with given category and filename.
 func yankFileGCS(category, filename string) error {
-	prefixedSrcFilename := utils.PrefixedPath(category, filename)
-	return delGCS(prefixedSrcFilename)
+	filename = utils.PrefixedPath(category, filename)
+	return delGCS(filename)
 }
 
 // writeGCS uploads a file from an io Reader to Google Cloud Storage with given destination
