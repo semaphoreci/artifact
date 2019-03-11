@@ -3,4 +3,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export GOOGLE_APPLICATION_CREDENTIALS=$DIR/../artifacts-play-84f9d6266402.json
 export BUCKET_NAME=artifacts-play-bucket
-go test ./...
+
+GCSPATH=myTest/test.sh
+export SEMAPHORE_JOB_ID=some_job_id_123
+go test ./... && ./run push job -d $GCSPATH test && ./run pull job -d test2 $GCSPATH && ./run yank job $GCSPATH && diff test test2 && rm test2

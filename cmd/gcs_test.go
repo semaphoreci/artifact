@@ -143,14 +143,14 @@ func TestGCSAdvanced(t *testing.T) {
 	f.Close()
 
 	gcsFilename := "debug/y.txt"
-	if err = pushFileGCS(utils.JOB, "/"+gcsFilename, srcFilename, "10"); err != nil {
+	if _, _, err = pushFileGCS(utils.JOB, "/"+gcsFilename, srcFilename, "10"); err != nil {
 		t.Fatalf("failed to push to Google Cloud Storage, err: %s", err)
 	}
 
 	// TODO: test expire when it's implemented
 
 	dstFilename := "test/z.txt"
-	if err = pullFileGCS(utils.JOB, "/"+dstFilename, gcsFilename); err != nil {
+	if _, _, err = pullFileGCS(utils.JOB, "/"+dstFilename, gcsFilename); err != nil {
 		t.Fatalf("failed to pull from Google Cloud Storage, err: %s", err)
 	}
 
@@ -162,7 +162,7 @@ func TestGCSAdvanced(t *testing.T) {
 	if !bytes.Equal(c2, content) {
 		t.Errorf("downloaded content(%s) doesn't match previously uploaded(%s)", string(c2), string(content))
 	}
-	if err = yankFileGCS(utils.JOB, "/"+gcsFilename); err != nil {
+	if _, err = yankFileGCS(utils.JOB, "/"+gcsFilename); err != nil {
 		t.Fatalf("failed to yank from to Google Cloud Storage, err: %s", err)
 	}
 }
