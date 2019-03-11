@@ -111,7 +111,19 @@ Uploads file or path into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip`.
 
 ###### Example 2: Uploading directory
 
-`artifact push job logs/webserver` pushs directory with all sub directories and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/log/webserver`
+`artifact push job myapp/v1/logs/webserver` pushs directory with all sub directories and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/webserver`
+
+`artifact push job /var/semaphore/webserver/logs/testxyz` pushs directory with all sub directories and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/testxyz`
+
+__We are relying on semantics of UNIX__
+
+`cp -r /var/semaphore/webserver/logs/testxyz /tmp`
+
+`cp /var/semaphore/webserver/logs/testxyz /tmp`
+
+`cp -r webserver/logs/testxyz /tmp`
+
+End result for both examples above: `/tmp/testxyz`
 
 ##### Alternative forms and flags
 
@@ -138,6 +150,10 @@ Supported options are:
 - `Ny` for N years
 
 If expires flag is not set artifact never expires.
+
+4. `--force` or `-f`
+
+`artifact push job x.zip` if `x.zip` exists in the bucket this command should fail. To overwrite file or directory user would need to specify "force" flag.
 
 ##### Output
 
@@ -166,7 +182,9 @@ File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip`
 
 ##### Description
 
-Artifact stored at `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip` will be push at current directory as `x.zip`.
+Artifact stored at `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip` will be downloaded in current directory as `x.zip`.
+
+Example with directory: `artifact pull job logs`, if logs is directory `logs` it will be created locally in current directory and whole content of `logs` from bucket will be downloaded into `logs` directory locally.
 
 ##### Alternative forms and flags
 
@@ -200,6 +218,8 @@ File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip` would be 
 Deletes artifact.
 
 `artifact yank job x.zip` deletes `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip`
+
+Example for directory: `artifact yank job logs` deletes `/artifacts/jobs/<SEMAPHORE_JOB_ID>/logs` directory and all recursively all the content that is in the `logs` directory in the bucket.
 
 `artifact yank workflow x.zip` deletes `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip`
 
