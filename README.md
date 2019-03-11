@@ -190,7 +190,15 @@ Example with directory: `artifact pull job logs`, if logs is directory `logs` it
 
 ##### Alternative forms and flags
 
-. `--job <job-id>` or `-j <job-id>`
+1. `--destination` or `-d` sets destination directory or file path
+
+`artifact pull job x.zip -d z.zip` pushs file into `z.zip`.
+
+Example for directory: `artifact pull job logs --destination debuglogs` pulls all sub-dirs and files into `debuglogs` locally.
+
+Example for deeply nested directory as destination: `artifact pull job logs --destination path/to/debuglogs` pulls all sub-dirs and files into `path/to/debuglogs` in current local directory.
+
+2. `--job <job-id>` or `-j <job-id>`
 
 By default command is looking for `SEMAPHORE_JOB_ID` env var. If it's not available it fails. If flag `--job` is specified it takes precedence over `SEMAPHORE_JOB_ID`.
 
