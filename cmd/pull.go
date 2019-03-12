@@ -19,6 +19,7 @@ to use them in a later phase, debug, or getting the results.`,
 	// },
 }
 
+// PullJobCmd is the subcommand for "artifact pull job ..."
 var PullJobCmd = &cobra.Command{
 	Use:   "job [SOURCE PATH]",
 	Short: "Download a job file from the storage.",
@@ -37,6 +38,7 @@ var PullJobCmd = &cobra.Command{
 	},
 }
 
+// PullWorkflowCmd is the subcommand for "artifact pull workflow ..."
 var PullWorkflowCmd = &cobra.Command{
 	Use:   "workflow [SOURCE PATH]",
 	Short: "Download a workflow file from the storage.",
@@ -55,6 +57,7 @@ var PullWorkflowCmd = &cobra.Command{
 	},
 }
 
+// PullProjectCmd is the subcommand for "artifact pull project ..."
 var PullProjectCmd = &cobra.Command{
 	Use:   "project [SOURCE PATH]",
 	Short: "Download a project file from the storage.",

@@ -18,6 +18,7 @@ while the rest of the semaphore process, or after it.`,
 	// },
 }
 
+// PushJobCmd is the subcommand for "artifact push job ..."
 var PushJobCmd = &cobra.Command{
 	Use:   "job [SOURCE PATH]",
 	Short: "Upload a job file to the storage.",
@@ -39,6 +40,7 @@ var PushJobCmd = &cobra.Command{
 	},
 }
 
+// PushWorkflowCmd is the subcommand for "artifact push workflow ..."
 var PushWorkflowCmd = &cobra.Command{
 	Use:   "workflow [SOURCE PATH]",
 	Short: "Upload a workflow file to the storage.",
@@ -60,6 +62,7 @@ var PushWorkflowCmd = &cobra.Command{
 	},
 }
 
+// PushProjectCmd is the subcommand for "artifact push project ..."
 var PushProjectCmd = &cobra.Command{
 	Use:   "project [SOURCE PATH]",
 	Short: "Upload a project file to the storage.",

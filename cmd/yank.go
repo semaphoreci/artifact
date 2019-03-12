@@ -19,6 +19,7 @@ don't need them any more.`,
 	// },
 }
 
+// YankJobCmd is the subcommand for "artifact yank job ..."
 var YankJobCmd = &cobra.Command{
 	Use:   "job [PATH]",
 	Short: "Deletes a job file from the storage.",
@@ -34,6 +35,7 @@ var YankJobCmd = &cobra.Command{
 	},
 }
 
+// YankWorkflowCmd is the subcommand for "artifact yank workflow ..."
 var YankWorkflowCmd = &cobra.Command{
 	Use:   "workflow [PATH]",
 	Short: "Deletes a workflow file from the storage.",
@@ -49,6 +51,7 @@ var YankWorkflowCmd = &cobra.Command{
 	},
 }
 
+// YankProjectCmd is the subcommand for "artifact yank project ..."
 var YankProjectCmd = &cobra.Command{
 	Use:   "project [PATH]",
 	Short: "Deletes a project file from the storage.",

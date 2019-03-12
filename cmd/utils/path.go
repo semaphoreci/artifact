@@ -6,8 +6,13 @@ import (
 	"path/filepath"
 )
 
+// PROJECT represents project in command line arguments for push, pull and yank commands.
 const PROJECT = "project"
+
+// WORKFLOW represents workflow in command line arguments for push, pull and yank commands.
 const WORKFLOW = "workflow"
+
+// JOB represents job in command line arguments for push, pull and yank commands.
 const JOB = "job"
 
 var (
@@ -16,6 +21,7 @@ var (
 		WORKFLOW: "workflows",
 		JOB:      "jobs",
 	}
+	// CategoryEnv returns environment variable names for project ID, workflow ID and job ID.
 	CategoryEnv = map[string]string{
 		PROJECT:  "SEMAPHORE_PROJECT_ID",
 		WORKFLOW: "SEMAPHORE_WORKFLOW_ID",
@@ -29,8 +35,8 @@ var (
 // For job files, it returns like: /artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip
 func PrefixedPath(category, filepath string) string {
 	pluralName := pluralCategory[category]
-	categoryId := os.Getenv(CategoryEnv[category])
-	return path.Join("/artifacts", pluralName, categoryId, filepath)
+	categoryID := os.Getenv(CategoryEnv[category])
+	return path.Join("/artifacts", pluralName, categoryID, filepath)
 }
 
 // PrefixedPathFromSource returns a path for Google Cloud Storage, where destination filename can be
