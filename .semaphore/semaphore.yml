@@ -1,0 +1,19 @@
+version: v1.0
+name: First pipeline example
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+blocks:
+  - name: "Build"
+    task:
+      env_vars:
+        - name: BUCKET_NAME
+          value: artifacts-play-bucket
+      jobs:
+      - name: Docker build
+        commands:
+          - checkout
+          - make build
+          - echo $PWD
+          - artifact push job README.md
