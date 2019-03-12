@@ -13,7 +13,8 @@ blocks:
       jobs:
       - name: Docker build
         commands:
-          - checkout
-          - make build
           - echo $PWD
+          - checkout
+          - make go.get
+          - make build
           - artifact push job README.md
