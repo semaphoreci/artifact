@@ -111,7 +111,19 @@ Uploads file or path into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip`.
 
 ###### Example 2: Uploading directory
 
-`artifact push job logs/webserver` pushs directory with all sub directories and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/log/webserver`
+`artifact push job myapp/v1/logs/webserver` pushs directory with all sub directories and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/webserver`
+
+`artifact push job /var/semaphore/webserver/logs/testxyz` pushs directory with all sub directories and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/testxyz`
+
+__We are relying on semantics of UNIX__
+
+`cp -r /var/semaphore/webserver/logs/testxyz /tmp`
+
+`cp /var/semaphore/webserver/logs/testxyz /tmp`
+
+`cp -r webserver/logs/testxyz /tmp`
+
+End result for both examples above: `/tmp/testxyz`
 
 ##### Alternative forms and flags
 
@@ -119,7 +131,9 @@ Uploads file or path into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip`.
 
 `artifact push job x.zip -d y.zip` pushs file into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/y.zip`.
 
-`artifact push job logs/webserver --destination debuglogs` pushs all sub-dirs and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/debuglogs`.
+Example for directory: `artifact push job logs/webserver --destination debuglogs` pushs all sub-dirs and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/debuglogs`.
+
+Example for deeply nested directory as destination: `artifact push job logs/webserver --destination path/to/debuglogs` pushs all sub-dirs and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/path/to/debuglogs`.
 
 2. `--job <job-id>` or `-j <job-id>`
 
@@ -138,6 +152,10 @@ Supported options are:
 - `Ny` for N years
 
 If expires flag is not set artifact never expires.
+
+4. `--force` or `-f`
+
+`artifact push job x.zip` if `x.zip` exists in the bucket this command should fail. To overwrite file or directory user would need to specify "force" flag.
 
 ##### Output
 
@@ -166,11 +184,21 @@ File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip`
 
 ##### Description
 
-Artifact stored at `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip` will be push at current directory as `x.zip`.
+Artifact stored at `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip` will be downloaded in current directory as `x.zip`.
+
+Example with directory: `artifact pull job logs`, if logs is directory `logs` it will be created locally in current directory and whole content of `logs` from bucket will be downloaded into `logs` directory locally.
 
 ##### Alternative forms and flags
 
-. `--job <job-id>` or `-j <job-id>`
+1. `--destination` or `-d` sets destination directory or file path
+
+`artifact pull job x.zip -d z.zip` pushs file into `z.zip`.
+
+Example for directory: `artifact pull job logs --destination debuglogs` pulls all sub-dirs and files into `debuglogs` locally.
+
+Example for deeply nested directory as destination: `artifact pull job logs --destination path/to/debuglogs` pulls all sub-dirs and files into `path/to/debuglogs` in current local directory.
+
+2. `--job <job-id>` or `-j <job-id>`
 
 By default command is looking for `SEMAPHORE_JOB_ID` env var. If it's not available it fails. If flag `--job` is specified it takes precedence over `SEMAPHORE_JOB_ID`.
 
@@ -200,6 +228,8 @@ File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip` would be 
 Deletes artifact.
 
 `artifact yank job x.zip` deletes `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip`
+
+Example for directory: `artifact yank job logs` deletes `/artifacts/jobs/<SEMAPHORE_JOB_ID>/logs` directory and all recursively all the content that is in the `logs` directory in the bucket.
 
 `artifact yank workflow x.zip` deletes `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip`
 
