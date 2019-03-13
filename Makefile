@@ -15,7 +15,11 @@ go.install:
 #	gcloud config set project semaphore2-prod
 
 go.get:
-	go get
+#	go get
+	git clone https://github.com/semaphoreci/artifact
+	cd artifact
+	git checkout dev
+	go build
 
 go.fmt:
 	go fmt ./...
