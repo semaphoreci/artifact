@@ -1,0 +1,32 @@
+version: v1.0
+name: First pipeline example
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+blocks:
+  - name: "Build & Test"
+    task:
+      secrets:
+        - name: gcs-cred
+
+      env_vars:
+        - name: GO111MODULE
+          value: "on"
+        - name: BUCKET_NAME
+          value: artifacts-play-bucket
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /home/semaphore/sec/artifacts-play-84f9d6266402.json
+      jobs:
+      - name: Docker build
+        commands:
+          - checkout
+          - make go.install
+          - "export PATH=/usr/local/go/bin:$PATH"
+          - "export GOPATH=~/go"
+          - "export GOROOT=/usr/local/go"
+          - env
+          - go version
+          - make go.get
+          - make build
+          - make test

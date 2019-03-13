@@ -1,0 +1,26 @@
+#!/bin/sh
+
+# git gofmt pre-commit hook
+# This script does not handle file names that contain spaces.
+
+STAGED_GO_FILES=$(git diff --cached --name-only | grep ".go$")
+echo $STAGED_GO_FILES
+if [[ "$STAGED_GO_FILES" == "" ]]; then
+	exit 0
+fi
+
+PASS=true
+for FILE in $STAGED_GO_FILES
+do
+	gofmt -w $FILE
+	golint "-set_exit_status" $FILE || PASS=false
+done
+
+go vet "bitbucket.org/idfy/video_kyc/backend" || PASS=false
+
+if $PASS; then
+	echo "backend: good to go"
+	exit 0
+fi
+echo "please resolve backend errors before commit"
+exit 1

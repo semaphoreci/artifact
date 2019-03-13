@@ -3,6 +3,7 @@
 ## Table of contents
 
 - [Use-cases](#use-cases)
+- [Init](#init)
 - [Concepts](#concepts)
 - [CLI](#cli)
   - [push](#push)
@@ -14,6 +15,12 @@
 1. Arhiving artifacts - storing final deliverables
 2. Promoting artifacts though pipeline and workflow
 3. Debugging - Store and inspect logs, screenshots and other debug data through UI or CLI
+
+## Init
+
+For initiating the repo:
+1. Add the Google Cloud Storage credential file to ../artifacts-play-84f9d6266402.json relative to this directory.
+2. symlink pre-commit script with `ln -s ../../script/pre-commit .git/hooks/`
 
 ## Concepts
 
