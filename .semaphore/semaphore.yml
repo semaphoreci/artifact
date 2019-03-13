@@ -29,3 +29,4 @@ blocks:
           - go version
           - make go.get
           - make build
+          - make test
