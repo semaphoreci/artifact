@@ -15,13 +15,13 @@ go.install:
 #	gcloud config set project semaphore2-prod
 
 go.get:
-#	go get
-	mkdir -p /home/semaphore/go/src/github.com/semaphoreci
-	cd /home/semaphore/go/src/github.com/semaphoreci
-	git clone https://github.com/semaphoreci/artifact
-	cd artifact
-	git checkout dev
-	go build
+	go get
+#	mkdir -p /home/semaphore/go/src/github.com/semaphoreci
+#	cd /home/semaphore/go/src/github.com/semaphoreci
+#	git clone https://github.com/semaphoreci/artifact
+#	cd artifact
+#	git checkout dev
+#	go build
 
 go.fmt:
 	go fmt ./...
