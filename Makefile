@@ -22,11 +22,11 @@ go.fmt:
 
 test:
 	go test ./...
-	go run main.go push job -d myTest/test.sh script/test
-	go run main.go pull job -d test2 myTest/test.sh
+	go run main.go push job -d myTest/test.sh README.md
+	go run main.go pull job -d readme2 myTest/test.sh
 	go run main.go yank job myTest/test.sh
-	diff script/test test2
-	rm test2
+	diff README.md readme2
+	rm readme2
 
 build:
 	env GOOS=$(OS) GOARCH=$(ARCH) go build -o artifact
