@@ -22,9 +22,9 @@ go.fmt:
 
 test:
 	go test ./...
-	go run main.go push job -d myTest/test.sh README.md
-	go run main.go pull job -d readme2 myTest/test.sh
-	go run main.go yank job myTest/test.sh
+	go run main.go push job -d myTest/myReadme README.md
+	go run main.go pull job -d readme2 myTest/myReadme
+	go run main.go yank job myTest/myReadme
 	diff README.md readme2
 	rm readme2
 
