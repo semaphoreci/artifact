@@ -20,21 +20,23 @@ func TestPrefixedPath(t *testing.T) {
 	os.Setenv(CategoryEnv[WORKFLOW], workflowID)
 	jobID := "JOB_03"
 	os.Setenv(CategoryEnv[JOB], jobID)
+	testPrefixedPath(PROJECT, ".", "/artifacts/projects/"+projectID)
 	testPrefixedPath(PROJECT, "x.zip", "/artifacts/projects/"+projectID+"/x.zip")
 	testPrefixedPath(PROJECT, "y.zip", "/artifacts/projects/"+projectID+"/y.zip")
 	testPrefixedPath(PROJECT, "tmp/x.zip", "/artifacts/projects/"+projectID+"/tmp/x.zip")
 	testPrefixedPath(PROJECT, "/tmp/x.zip", "/artifacts/projects/"+projectID+"/tmp/x.zip")
 	testPrefixedPath(WORKFLOW, "x.zip", "/artifacts/workflows/"+workflowID+"/x.zip")
-	testPrefixedPath(WORKFLOW, "path/to/the/deep/x.zip", "/artifacts/workflows/"+workflowID+"/path/to/the/deep/x.zip")
+	testPrefixedPath(WORKFLOW, "path/to/the/deep/x.zip", "/artifacts/workflows/"+workflowID+
+		"/path/to/the/deep/x.zip")
 	testPrefixedPath(JOB, "x.zip", "/artifacts/jobs/"+jobID+"/x.zip")
 }
 
 func TestPathFromSource(t *testing.T) {
-	testPathFromSource := func(dst, src, expected string) {
+	testPathFromSource := func(dst, src, expDst string) {
 		result := PathFromSource(dst, src)
-		if result != expected {
+		if result != expDst {
 			t.Errorf("not match result(%s) with expected(%s) for dst(%s) and src(%s)",
-				result, expected, dst, src)
+				result, expDst, dst, src)
 		}
 	}
 
@@ -56,6 +58,11 @@ func TestToRelative(t *testing.T) {
 	}
 
 	testToRelative("", "")
+	testToRelative("./../source", "source")
+	testToRelative("./../source/..", "")
+	testToRelative("./../source/../longer", "longer")
+	testToRelative("./../source/../longer/", "longer")
+	testToRelative("./../source/../longer/.", "longer")
 	testToRelative("source", "source")
 	testToRelative("/source", "source")
 	testToRelative("long/path/to/source", "long/path/to/source")

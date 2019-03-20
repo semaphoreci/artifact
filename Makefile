@@ -21,7 +21,9 @@ go.fmt:
 	go fmt ./...
 
 test:
-	go test ./...
+	go test -v ./...
+	# make sure to wipe everything before the test
+	go run main.go yank job .
 	go run main.go push job -d myTest/myReadme README.md
 	go run main.go pull job -d readme2 myTest/myReadme
 	go run main.go yank job myTest/myReadme

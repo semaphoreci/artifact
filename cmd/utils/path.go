@@ -3,7 +3,7 @@ package utils
 import (
 	"os"
 	"path"
-	"path/filepath"
+	"strings"
 )
 
 // PROJECT represents project in command line arguments for push, pull and yank commands.
@@ -52,17 +52,12 @@ func PrefixedPathFromSource(category, dstFilepath, srcFilepath string) string {
 // gained from the source filename.
 func PathFromSource(dstFilepath, srcFilepath string) string {
 	if len(dstFilepath) == 0 {
-		dstFilepath = filepath.Base(srcFilepath)
+		dstFilepath = path.Base(srcFilepath)
 	}
 	return dstFilepath
 }
 
-// ToRelative makes sure that the given path is relative: having do / on the beginning.
+// ToRelative removes all ./, ../ etc prefixes from the string.
 func ToRelative(filepath string) string {
-	if len(filepath) > 0 {
-		if filepath[0] == '/' {
-			filepath = filepath[1:]
-		}
-	}
-	return filepath
+	return strings.TrimLeft(path.Clean(filepath), "./")
 }

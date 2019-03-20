@@ -14,9 +14,21 @@ var pullCmd = &cobra.Command{
 	Long: `You may store files project, workflow or job related files with
 artifact push. With artifact pull you can download them to the current directory
 to use them in a later phase, debug, or getting the results.`,
-	// Run: func(cmd *cobra.Command, args []string) {
-	// 	fmt.Println("pull called")
-	// },
+}
+
+func runPullForCategory(cmd *cobra.Command, args []string, category string) (string, string) {
+	src := args[0]
+
+	dst, err := cmd.Flags().GetString("destination")
+	utils.Check(err)
+
+	force, err := cmd.Flags().GetBool("force")
+	utils.Check(err)
+
+	dst, src = pullPaths(category, dst, src)
+	err = pullGCS(dst, src, force)
+	utils.Check(err)
+	return dst, src
 }
 
 // PullJobCmd is the subcommand for "artifact pull job ..."
@@ -27,13 +39,7 @@ var PullJobCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		src := args[0]
-
-		dst, err := cmd.Flags().GetString("destination")
-		utils.Check(err)
-
-		dst, src, err = pullFileGCS(utils.JOB, dst, src)
-		utils.Check(err)
+		dst, src := runPullForCategory(cmd, args, utils.JOB)
 		fmt.Printf("File '%s' pulled to '%s' for current job.\n", src, dst)
 	},
 }
@@ -46,13 +52,7 @@ var PullWorkflowCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		src := args[0]
-
-		dst, err := cmd.Flags().GetString("destination")
-		utils.Check(err)
-
-		dst, src, err = pullFileGCS(utils.WORKFLOW, dst, src)
-		utils.Check(err)
+		dst, src := runPullForCategory(cmd, args, utils.WORKFLOW)
 		fmt.Printf("File '%s' pulled to '%s' for current workflow.\n", src, dst)
 	},
 }
@@ -65,13 +65,7 @@ var PullProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		src := args[0]
-
-		dst, err := cmd.Flags().GetString("destination")
-		utils.Check(err)
-
-		dst, src, err = pullFileGCS(utils.PROJECT, dst, src)
-		utils.Check(err)
+		dst, src := runPullForCategory(cmd, args, utils.PROJECT)
 		fmt.Printf("File '%s' pulled to '%s' for current project.\n", src, dst)
 	},
 }
@@ -87,4 +81,9 @@ func init() {
 	PullJobCmd.Flags().StringP("destination", "d", "", desc)
 	PullWorkflowCmd.Flags().StringP("destination", "d", "", desc)
 	PullProjectCmd.Flags().StringP("destination", "d", "", desc)
+
+	desc = "force overwrite"
+	PullJobCmd.Flags().BoolP("force", "f", false, desc)
+	PullWorkflowCmd.Flags().BoolP("force", "f", false, desc)
+	PullProjectCmd.Flags().BoolP("force", "f", false, desc)
 }

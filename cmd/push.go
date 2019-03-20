@@ -13,9 +13,24 @@ var pushCmd = &cobra.Command{
 	Short: "Stores a file or directory in the storage for later use",
 	Long: `You may store project, workflow or job related files, that you can use
 while the rest of the semaphore process, or after it.`,
-	// Run: func(cmd *cobra.Command, args []string) {
-	// 	fmt.Println("push called")
-	// },
+}
+
+func runPushForCategory(cmd *cobra.Command, args []string, category string) (string, string) {
+	src := args[0]
+
+	dst, err := cmd.Flags().GetString("destination")
+	utils.Check(err)
+
+	force, err := cmd.Flags().GetBool("force")
+	utils.Check(err)
+
+	expireIn, err := cmd.Flags().GetString("expire-in")
+	utils.Check(err)
+
+	dst, src = pushPaths(category, dst, src)
+	err = pushGCS(dst, src, expireIn, force)
+	utils.Check(err)
+	return dst, src
 }
 
 // PushJobCmd is the subcommand for "artifact push job ..."
@@ -26,16 +41,7 @@ var PushJobCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		src := args[0]
-
-		dst, err := cmd.Flags().GetString("destination")
-		utils.Check(err)
-
-		expireIn, err := cmd.Flags().GetString("expire-in")
-		utils.Check(err)
-
-		dst, src, err = pushFileGCS(utils.JOB, dst, src, expireIn)
-		utils.Check(err)
+		dst, src := runPushForCategory(cmd, args, utils.JOB)
 		fmt.Printf("File '%s' pushed to '%s' for current job.\n", src, dst)
 	},
 }
@@ -48,16 +54,7 @@ var PushWorkflowCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		src := args[0]
-
-		dst, err := cmd.Flags().GetString("destination")
-		utils.Check(err)
-
-		expireIn, err := cmd.Flags().GetString("expire-in")
-		utils.Check(err)
-
-		dst, src, err = pushFileGCS(utils.WORKFLOW, dst, src, expireIn)
-		utils.Check(err)
+		dst, src := runPushForCategory(cmd, args, utils.WORKFLOW)
 		fmt.Printf("File '%s' pushed to '%s' for current workflow.\n", src, dst)
 	},
 }
@@ -70,16 +67,7 @@ var PushProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		src := args[0]
-
-		dst, err := cmd.Flags().GetString("destination")
-		utils.Check(err)
-
-		expireIn, err := cmd.Flags().GetString("expire-in")
-		utils.Check(err)
-
-		dst, src, err = pushFileGCS(utils.PROJECT, dst, src, expireIn)
-		utils.Check(err)
+		dst, src := runPushForCategory(cmd, args, utils.PROJECT)
 		fmt.Printf("File '%s' pushed to '%s' for current project.\n", src, dst)
 	},
 }
@@ -94,6 +82,11 @@ func init() {
 	PushJobCmd.Flags().StringP("destination", "d", "", desc)
 	PushWorkflowCmd.Flags().StringP("destination", "d", "", desc)
 	PushProjectCmd.Flags().StringP("destination", "d", "", desc)
+
+	desc = "force overwrite"
+	PushJobCmd.Flags().BoolP("force", "f", false, desc)
+	PushWorkflowCmd.Flags().BoolP("force", "f", false, desc)
+	PushProjectCmd.Flags().BoolP("force", "f", false, desc)
 
 	desc = `Removes the files after the given amount of time.
 just integer (number of seconds)
