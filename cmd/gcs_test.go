@@ -245,7 +245,7 @@ func TestGCSOverwrite(t *testing.T) {
 	delDirGCS("/artifacts")
 
 	compareD := createTmpDir(t)
-	// defer os.RemoveAll(compareD)
+	defer os.RemoveAll(compareD)
 	compareDDest := path.Join(compareD, "check")
 
 	d := createTmpDir(t)
