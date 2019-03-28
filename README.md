@@ -18,9 +18,8 @@
 
 ## Init
 
-For initiating the repo:
-1. Add the Google Cloud Storage credential file to ../artifacts-play-84f9d6266402.json relative to this directory.
-2. symlink pre-commit script with `ln -s ../../script/pre-commit .git/hooks/`
+* For local testing, add the Google Cloud Storage credential file to ../artifacts-play-84f9d6266402.json relative to this directory.
+* Before committing anything, symlink pre-commit script with `ln -s ../../script/pre-commit .git/hooks/`
 
 ## Concepts
 

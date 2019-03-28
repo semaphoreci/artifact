@@ -134,6 +134,8 @@ func TestGCS(t *testing.T) {
 		t.Errorf("downloaded content(%s) doesn't match previously uploaded(%s)", b.String(),
 			string(content))
 	}
+
+	err = delGCS(filename)
 	assertNilError(t, "deleting from Google Cloud Storage", err)
 }
 
