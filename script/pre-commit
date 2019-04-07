@@ -4,6 +4,8 @@
 # This script does not handle file names that contain spaces.
 
 STAGED_GO_FILES=$(git diff --cached --name-only | grep ".go$")
+# for checking all files, uncomment the following
+#STAGED_GO_FILES=$(find -name "*.go")
 echo $STAGED_GO_FILES
 if [[ "$STAGED_GO_FILES" == "" ]]; then
 	exit 0
@@ -16,11 +18,11 @@ do
 	golint "-set_exit_status" $FILE || PASS=false
 done
 
-go vet "bitbucket.org/idfy/video_kyc/backend" || PASS=false
+go vet "github.com/semaphoreci/artifact" || PASS=false
 
 if $PASS; then
-	echo "backend: good to go"
+	echo "go vet and golint: good to go"
 	exit 0
 fi
-echo "please resolve backend errors before commit"
+echo "please resolve lint errors before commit"
 exit 1
