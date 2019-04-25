@@ -15,7 +15,8 @@ var pushCmd = &cobra.Command{
 while the rest of the semaphore process, or after it.`,
 }
 
-func runPushForCategory(cmd *cobra.Command, args []string, category string) (string, string) {
+func runPushForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
+	utils.InitPathID(category, catID)
 	src := args[0]
 
 	dst, err := cmd.Flags().GetString("destination")
@@ -27,7 +28,7 @@ func runPushForCategory(cmd *cobra.Command, args []string, category string) (str
 	expireIn, err := cmd.Flags().GetString("expire-in")
 	utils.Check(err)
 
-	dst, src = pushPaths(category, dst, src)
+	dst, src = pushPaths(dst, src)
 	err = pushGCS(dst, src, expireIn, force)
 	utils.Check(err)
 	return dst, src
@@ -41,7 +42,9 @@ var PushJobCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPushForCategory(cmd, args, utils.JOB)
+		catID, err := cmd.Flags().GetString("job-id")
+		utils.Check(err)
+		dst, src := runPushForCategory(cmd, args, utils.JOB, catID)
 		fmt.Printf("File '%s' pushed to '%s' for current job.\n", src, dst)
 	},
 }
@@ -54,7 +57,9 @@ var PushWorkflowCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPushForCategory(cmd, args, utils.WORKFLOW)
+		catID, err := cmd.Flags().GetString("workflow-id")
+		utils.Check(err)
+		dst, src := runPushForCategory(cmd, args, utils.WORKFLOW, catID)
 		fmt.Printf("File '%s' pushed to '%s' for current workflow.\n", src, dst)
 	},
 }
@@ -67,7 +72,7 @@ var PushProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPushForCategory(cmd, args, utils.PROJECT)
+		dst, src := runPushForCategory(cmd, args, utils.PROJECT, "")
 		fmt.Printf("File '%s' pushed to '%s' for current project.\n", src, dst)
 	},
 }
@@ -99,4 +104,7 @@ Ny for N years
 	PushJobCmd.Flags().StringP("expire-in", "e", "", desc)
 	PushWorkflowCmd.Flags().StringP("expire-in", "e", "", desc)
 	PushProjectCmd.Flags().StringP("expire-in", "e", "", desc)
+
+	PushJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
+	PushWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
 }

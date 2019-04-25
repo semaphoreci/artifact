@@ -16,10 +16,11 @@ artifact push. With artifact yank you can delete them if you
 don't need them any more.`,
 }
 
-func runYankForCategory(cmd *cobra.Command, args []string, category string) string {
+func runYankForCategory(cmd *cobra.Command, args []string, category, catID string) string {
+	utils.InitPathID(category, catID)
 	name := args[0]
 
-	name = yankPath(category, name)
+	name = yankPath(name)
 	err := yankGCS(name)
 	utils.Check(err)
 	return name
@@ -33,7 +34,9 @@ var YankJobCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		name := runYankForCategory(cmd, args, utils.JOB)
+		catID, err := cmd.Flags().GetString("job-id")
+		utils.Check(err)
+		name := runYankForCategory(cmd, args, utils.JOB, catID)
 		fmt.Printf("File '%s' deleted for current job.\n", name)
 	},
 }
@@ -46,7 +49,9 @@ var YankWorkflowCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		name := runYankForCategory(cmd, args, utils.WORKFLOW)
+		catID, err := cmd.Flags().GetString("workflow-id")
+		utils.Check(err)
+		name := runYankForCategory(cmd, args, utils.WORKFLOW, catID)
 		fmt.Printf("File '%s' deleted for current workflow.\n", name)
 	},
 }
@@ -59,7 +64,7 @@ var YankProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		name := runYankForCategory(cmd, args, utils.PROJECT)
+		name := runYankForCategory(cmd, args, utils.PROJECT, "")
 		fmt.Printf("File '%s' deleted for current project.\n", name)
 	},
 }
@@ -70,4 +75,7 @@ func init() {
 	yankCmd.AddCommand(YankJobCmd)
 	yankCmd.AddCommand(YankWorkflowCmd)
 	yankCmd.AddCommand(YankProjectCmd)
+
+	YankJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
+	YankWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
 }

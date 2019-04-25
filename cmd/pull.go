@@ -16,7 +16,8 @@ artifact push. With artifact pull you can download them to the current directory
 to use them in a later phase, debug, or getting the results.`,
 }
 
-func runPullForCategory(cmd *cobra.Command, args []string, category string) (string, string) {
+func runPullForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
+	utils.InitPathID(category, catID)
 	src := args[0]
 
 	dst, err := cmd.Flags().GetString("destination")
@@ -25,7 +26,7 @@ func runPullForCategory(cmd *cobra.Command, args []string, category string) (str
 	force, err := cmd.Flags().GetBool("force")
 	utils.Check(err)
 
-	dst, src = pullPaths(category, dst, src)
+	dst, src = pullPaths(dst, src)
 	err = pullGCS(dst, src, force)
 	utils.Check(err)
 	return dst, src
@@ -39,7 +40,9 @@ var PullJobCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPullForCategory(cmd, args, utils.JOB)
+		catID, err := cmd.Flags().GetString("job-id")
+		utils.Check(err)
+		dst, src := runPullForCategory(cmd, args, utils.JOB, catID)
 		fmt.Printf("File '%s' pulled to '%s' for current job.\n", src, dst)
 	},
 }
@@ -52,7 +55,9 @@ var PullWorkflowCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPullForCategory(cmd, args, utils.WORKFLOW)
+		catID, err := cmd.Flags().GetString("workflow-id")
+		utils.Check(err)
+		dst, src := runPullForCategory(cmd, args, utils.WORKFLOW, catID)
 		fmt.Printf("File '%s' pulled to '%s' for current workflow.\n", src, dst)
 	},
 }
@@ -65,7 +70,7 @@ var PullProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPullForCategory(cmd, args, utils.PROJECT)
+		dst, src := runPullForCategory(cmd, args, utils.PROJECT, "")
 		fmt.Printf("File '%s' pulled to '%s' for current project.\n", src, dst)
 	},
 }
@@ -86,4 +91,7 @@ func init() {
 	PullJobCmd.Flags().BoolP("force", "f", false, desc)
 	PullWorkflowCmd.Flags().BoolP("force", "f", false, desc)
 	PullProjectCmd.Flags().BoolP("force", "f", false, desc)
+
+	PullJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
+	PullWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
 }

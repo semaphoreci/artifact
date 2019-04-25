@@ -37,9 +37,10 @@ func assertAlreadyExists(t *testing.T, msg string, err error) {
 	assertTrue(t, ok, msg+" should fail with an ErrAlreadyExists, but it's: %s", err)
 }
 
-func TestPushPaths(t *testing.T) {
+func TestPushPathsEmptyDefault(t *testing.T) {
 	testPushPaths := func(category, dst, src, expDst, expSrc string) {
-		resultDst, resultSrc := pushPaths(category, dst, src)
+		utils.InitPathID(category, "")
+		resultDst, resultSrc := pushPaths(dst, src)
 		if resultDst != expDst {
 			t.Errorf("not match destination(%s) with expected(%s) for category(%s), dst(%s) and src(%s)",
 				resultDst, expDst, category, dst, src)
@@ -74,9 +75,49 @@ func TestPushPaths(t *testing.T) {
 	testPushPaths(utils.JOB, "/long/path/to/y.zip", "/long/path/to/x.zip", "/artifacts/jobs/"+jobID+"/long/path/to/y.zip", "/long/path/to/x.zip")
 }
 
-func TestPullPaths(t *testing.T) {
+func TestPushPathsSetDefault(t *testing.T) {
+	testPushPaths := func(category, dst, src, expDst, expSrc string) {
+		utils.InitPathID(category, "fixed")
+		resultDst, resultSrc := pushPaths(dst, src)
+		if resultDst != expDst {
+			t.Errorf("not match destination(%s) with expected(%s) for category(%s), dst(%s) and src(%s)",
+				resultDst, expDst, category, dst, src)
+		}
+		if resultSrc != expSrc {
+			t.Errorf("not match source(%s) with expected(%s) for category(%s), dst(%s) and src(%s)",
+				resultSrc, expSrc, category, dst, src)
+		}
+	}
+
+	jobID := "JOB_03"
+	os.Setenv(utils.CategoryEnv[utils.JOB], jobID)
+	fixed := "fixed"
+	testPushPaths(utils.JOB, "", "x.zip", "/artifacts/jobs/"+fixed+"/x.zip", "x.zip")
+	testPushPaths(utils.JOB, "", "/x.zip", "/artifacts/jobs/"+fixed+"/x.zip", "/x.zip")
+	testPushPaths(utils.JOB, "", "long/path/to/x.zip", "/artifacts/jobs/"+fixed+"/x.zip", "long/path/to/x.zip")
+	testPushPaths(utils.JOB, "", "/long/path/to/x.zip", "/artifacts/jobs/"+fixed+"/x.zip", "/long/path/to/x.zip")
+	testPushPaths(utils.JOB, "y.zip", "x.zip", "/artifacts/jobs/"+fixed+"/y.zip", "x.zip")
+	testPushPaths(utils.JOB, "y.zip", "/x.zip", "/artifacts/jobs/"+fixed+"/y.zip", "/x.zip")
+	testPushPaths(utils.JOB, "y.zip", "long/path/to/x.zip", "/artifacts/jobs/"+fixed+"/y.zip", "long/path/to/x.zip")
+	testPushPaths(utils.JOB, "y.zip", "/long/path/to/x.zip", "/artifacts/jobs/"+fixed+"/y.zip", "/long/path/to/x.zip")
+	testPushPaths(utils.JOB, "/y.zip", "x.zip", "/artifacts/jobs/"+fixed+"/y.zip", "x.zip")
+	testPushPaths(utils.JOB, "/y.zip", "/x.zip", "/artifacts/jobs/"+fixed+"/y.zip", "/x.zip")
+	testPushPaths(utils.JOB, "/y.zip", "long/path/to/x.zip", "/artifacts/jobs/"+fixed+"/y.zip", "long/path/to/x.zip")
+	testPushPaths(utils.JOB, "/y.zip", "/long/path/to/x.zip", "/artifacts/jobs/"+fixed+"/y.zip", "/long/path/to/x.zip")
+	testPushPaths(utils.JOB, "long/path/to/y.zip", "x.zip", "/artifacts/jobs/"+fixed+"/long/path/to/y.zip", "x.zip")
+	testPushPaths(utils.JOB, "long/path/to/y.zip", "/x.zip", "/artifacts/jobs/"+fixed+"/long/path/to/y.zip", "/x.zip")
+	testPushPaths(utils.JOB, "long/path/to/y.zip", "long/path/to/x.zip", "/artifacts/jobs/"+fixed+"/long/path/to/y.zip", "long/path/to/x.zip")
+	testPushPaths(utils.JOB, "long/path/to/y.zip", "/long/path/to/x.zip", "/artifacts/jobs/"+fixed+"/long/path/to/y.zip", "/long/path/to/x.zip")
+	testPushPaths(utils.JOB, "/long/path/to/y.zip", "x.zip", "/artifacts/jobs/"+fixed+"/long/path/to/y.zip", "x.zip")
+	testPushPaths(utils.JOB, "/long/path/to/y.zip", "/x.zip", "/artifacts/jobs/"+fixed+"/long/path/to/y.zip", "/x.zip")
+	testPushPaths(utils.JOB, "/long/path/to/y.zip", "long/path/to/x.zip", "/artifacts/jobs/"+fixed+"/long/path/to/y.zip", "long/path/to/x.zip")
+	testPushPaths(utils.JOB, "/long/path/to/y.zip", "/long/path/to/x.zip", "/artifacts/jobs/"+fixed+"/long/path/to/y.zip", "/long/path/to/x.zip")
+}
+
+func TestPullPathsEmptyDefault(t *testing.T) {
 	testPullPaths := func(category, dst, src, expDst, expSrc string) {
-		resultDst, resultSrc := pullPaths(category, dst, src)
+		utils.InitPathID(category, "")
+		resultDst, resultSrc := pullPaths(dst, src)
 		if resultDst != expDst {
 			t.Errorf("not match destination(%s) with expected(%s) for category(%s), dst(%s) and src(%s)",
 				resultDst, expDst, category, dst, src)
@@ -109,6 +150,45 @@ func TestPullPaths(t *testing.T) {
 	testPullPaths(utils.JOB, "/long/path/to/y.zip", "/x.zip", "/long/path/to/y.zip", "/artifacts/jobs/"+jobID+"/x.zip")
 	testPullPaths(utils.JOB, "/long/path/to/y.zip", "long/path/to/x.zip", "/long/path/to/y.zip", "/artifacts/jobs/"+jobID+"/long/path/to/x.zip")
 	testPullPaths(utils.JOB, "/long/path/to/y.zip", "/long/path/to/x.zip", "/long/path/to/y.zip", "/artifacts/jobs/"+jobID+"/long/path/to/x.zip")
+}
+
+func TestPullPathsSetDefault(t *testing.T) {
+	testPullPaths := func(category, dst, src, expDst, expSrc string) {
+		utils.InitPathID(category, "fixed")
+		resultDst, resultSrc := pullPaths(dst, src)
+		if resultDst != expDst {
+			t.Errorf("not match destination(%s) with expected(%s) for category(%s), dst(%s) and src(%s)",
+				resultDst, expDst, category, dst, src)
+		}
+		if resultSrc != expSrc {
+			t.Errorf("not match source(%s) with expected(%s) for category(%s), dst(%s) and src(%s)",
+				resultSrc, expSrc, category, dst, src)
+		}
+	}
+
+	jobID := "JOB_03"
+	os.Setenv(utils.CategoryEnv[utils.JOB], jobID)
+	fixed := "fixed"
+	testPullPaths(utils.JOB, "", "x.zip", "x.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPullPaths(utils.JOB, "", "/x.zip", "x.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPullPaths(utils.JOB, "", "long/path/to/x.zip", "x.zip", "/artifacts/jobs/"+fixed+"/long/path/to/x.zip")
+	testPullPaths(utils.JOB, "", "/long/path/to/x.zip", "x.zip", "/artifacts/jobs/"+fixed+"/long/path/to/x.zip")
+	testPullPaths(utils.JOB, "y.zip", "x.zip", "y.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPullPaths(utils.JOB, "y.zip", "/x.zip", "y.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPullPaths(utils.JOB, "y.zip", "long/path/to/x.zip", "y.zip", "/artifacts/jobs/"+fixed+"/long/path/to/x.zip")
+	testPullPaths(utils.JOB, "y.zip", "/long/path/to/x.zip", "y.zip", "/artifacts/jobs/"+fixed+"/long/path/to/x.zip")
+	testPullPaths(utils.JOB, "/y.zip", "x.zip", "/y.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPullPaths(utils.JOB, "/y.zip", "/x.zip", "/y.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPullPaths(utils.JOB, "/y.zip", "long/path/to/x.zip", "/y.zip", "/artifacts/jobs/"+fixed+"/long/path/to/x.zip")
+	testPullPaths(utils.JOB, "/y.zip", "/long/path/to/x.zip", "/y.zip", "/artifacts/jobs/"+fixed+"/long/path/to/x.zip")
+	testPullPaths(utils.JOB, "long/path/to/y.zip", "x.zip", "long/path/to/y.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPullPaths(utils.JOB, "long/path/to/y.zip", "/x.zip", "long/path/to/y.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPullPaths(utils.JOB, "long/path/to/y.zip", "long/path/to/x.zip", "long/path/to/y.zip", "/artifacts/jobs/"+fixed+"/long/path/to/x.zip")
+	testPullPaths(utils.JOB, "long/path/to/y.zip", "/long/path/to/x.zip", "long/path/to/y.zip", "/artifacts/jobs/"+fixed+"/long/path/to/x.zip")
+	testPullPaths(utils.JOB, "/long/path/to/y.zip", "x.zip", "/long/path/to/y.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPullPaths(utils.JOB, "/long/path/to/y.zip", "/x.zip", "/long/path/to/y.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPullPaths(utils.JOB, "/long/path/to/y.zip", "long/path/to/x.zip", "/long/path/to/y.zip", "/artifacts/jobs/"+fixed+"/long/path/to/x.zip")
+	testPullPaths(utils.JOB, "/long/path/to/y.zip", "/long/path/to/x.zip", "/long/path/to/y.zip", "/artifacts/jobs/"+fixed+"/long/path/to/x.zip")
 }
 
 func skipShort(t *testing.T) {
@@ -183,7 +263,8 @@ func assertNotDir(t *testing.T, name string) {
 }
 
 func compareFile(t *testing.T, category, dst, src string, expContent []byte, expAlready bool) {
-	dst, src = pullPaths(category, dst, src)
+	utils.InitPathID(category, "")
+	dst, src = pullPaths(dst, src)
 	err := pullGCS(dst, src, false)
 	if expAlready {
 		assertAlreadyExists(t, "Pulling file to compare", err)
@@ -201,7 +282,8 @@ func compareFile(t *testing.T, category, dst, src string, expContent []byte, exp
 }
 
 func compareDir(t *testing.T, category, dst, src string, expContents map[string][]byte) {
-	dst, src = pullPaths(category, dst, src)
+	utils.InitPathID(category, "")
+	dst, src = pullPaths(dst, src)
 	os.Mkdir(dst, 0777)
 	err := pullGCS(dst, src, false)
 	assertAlreadyExists(t, "Pulling directory to compare", err)
@@ -261,8 +343,9 @@ func TestGCSOverwrite(t *testing.T) {
 	createFileWithContent(t, srcFilename, content, expContents)
 
 	category := utils.JOB
+	utils.InitPathID(category, "")
 	gcsFilenameX := "x"
-	dst, src := pushPaths(category, gcsFilenameX, srcFilename)
+	dst, src := pushPaths(gcsFilenameX, srcFilename)
 	assertNotFile(t, dst)
 	assertNotDir(t, dst)
 
@@ -276,7 +359,7 @@ func TestGCSOverwrite(t *testing.T) {
 	createFileWithContent(t, srcFilename2, content2, expContents)
 
 	// trying to overwrite file with a file without force; expectation: fails
-	dst, src = pushPaths(category, "", srcFilename2)
+	dst, src = pushPaths("", srcFilename2)
 	err = pushGCS(dst, src, "100", false)
 	assertAlreadyExists(t, "overwriting file with file without force", err)
 	assertFile(t, dst)
@@ -284,7 +367,7 @@ func TestGCSOverwrite(t *testing.T) {
 	compareFile(t, category, compareDDest, gcsFilenameX, content, true)
 
 	// trying to overwrite file with a file with force; expectation: succeeds
-	dst, src = pushPaths(category, "", srcFilename2)
+	dst, src = pushPaths("", srcFilename2)
 	err = pushGCS(dst, src, "100", true)
 	assertNilError(t, "force push file to Google Cloud Storage", err)
 	assertFile(t, dst)
@@ -292,7 +375,7 @@ func TestGCSOverwrite(t *testing.T) {
 	compareFile(t, category, compareDDest, gcsFilenameX, content2, true)
 
 	// trying to overwrite file with a directory without force; expectation: fails
-	dst, src = pushPaths(category, gcsFilenameX, d2)
+	dst, src = pushPaths(gcsFilenameX, d2)
 	err = pushGCS(dst, src, "100", false)
 	assertAlreadyExists(t, "overwriting file with directory without force", err)
 	assertFile(t, dst)
@@ -300,7 +383,7 @@ func TestGCSOverwrite(t *testing.T) {
 	compareFile(t, category, compareDDest, gcsFilenameX, content2, true)
 
 	// trying to overwrite file with a directory with force; expectation: succeeds
-	dst, src = pushPaths(category, gcsFilenameX, d2)
+	dst, src = pushPaths(gcsFilenameX, d2)
 	err = pushGCS(dst, src, "100", true)
 	assertNilError(t, "overwriting file with directory with force", err)
 	assertNotFile(t, dst)
@@ -317,7 +400,7 @@ func TestGCSOverwrite(t *testing.T) {
 	createFileWithContent(t, srcFilename, content, expContents2)
 
 	// trying to overwrite directory with a directory without force; expectation: fail
-	dst, src = pushPaths(category, gcsFilenameX, d2)
+	dst, src = pushPaths(gcsFilenameX, d2)
 	err = pushGCS(dst, src, "100", false)
 	assertAlreadyExists(t, "overwriting directory with directory without force", err)
 	assertNotFile(t, dst)
@@ -325,7 +408,7 @@ func TestGCSOverwrite(t *testing.T) {
 	compareDir(t, category, compareDDest, gcsFilenameX, expContents)
 
 	// trying to overwrite directory with a directory with force; expectation: success
-	dst, src = pushPaths(category, gcsFilenameX, d2)
+	dst, src = pushPaths(gcsFilenameX, d2)
 	err = pushGCS(dst, src, "100", true)
 	assertNilError(t, "overwriting directory with directory with force", err)
 	assertNotFile(t, dst)
@@ -333,7 +416,7 @@ func TestGCSOverwrite(t *testing.T) {
 	compareDir(t, category, compareDDest, gcsFilenameX, expContents2)
 
 	// trying to overwrite directory with a file without force; expectation: fails
-	dst, src = pushPaths(category, "", srcFilename2)
+	dst, src = pushPaths("", srcFilename2)
 	err = pushGCS(dst, src, "100", false)
 	assertAlreadyExists(t, "overwriting directory with file without force", err)
 	assertNotFile(t, dst)
@@ -341,14 +424,14 @@ func TestGCSOverwrite(t *testing.T) {
 	compareDir(t, category, compareDDest, gcsFilenameX, expContents2)
 
 	// trying to overwrite directory with a file with force; expectation: succeeds
-	dst, src = pushPaths(category, gcsFilenameX, srcFilename)
+	dst, src = pushPaths(gcsFilenameX, srcFilename)
 	err = pushGCS(dst, src, "100", true)
 	assertNilError(t, "force push file to Google Cloud Storage", err)
 	assertFile(t, dst)
 	assertNotDir(t, dst)
 	compareFile(t, category, compareDDest, gcsFilenameX, content, true)
 
-	filename := yankPath(category, gcsFilenameX)
+	filename := yankPath(gcsFilenameX)
 	err = yankGCS(filename)
 	assertNilError(t, "yank file from Google Cloud Storage", err)
 	assertNotFile(t, filename)

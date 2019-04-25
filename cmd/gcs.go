@@ -107,9 +107,9 @@ func initGCS() error {
 // pushPaths returns source and destination paths to push a file to Google Cloud Storage.
 // Source path becomes a relative path on the file system, destination path becomes a category
 // prefixed path to the GCS Bucket.
-func pushPaths(category, dstFilename, srcFilename string) (string, string) {
+func pushPaths(dstFilename, srcFilename string) (string, string) {
 	dstFilename = utils.ToRelative(dstFilename)
-	dstFilename = utils.PrefixedPathFromSource(category, dstFilename, srcFilename)
+	dstFilename = utils.PrefixedPathFromSource(dstFilename, srcFilename)
 	return dstFilename, srcFilename
 }
 
@@ -195,7 +195,7 @@ func walkGCS(dirname string, wf filepath.WalkFunc) error {
 }
 
 // pushGCS uploads a file or directory from the file system to Google Cloud Storage
-// with given category, destination name, and human readable expire string.
+// with given destination name, and human readable expire string.
 func pushGCS(dst, src, expires string, force bool) error {
 	expTime, err := utils.ParseRelativeAgeForHumans(expires)
 	if err != nil {
@@ -228,8 +228,8 @@ func pushGCS(dst, src, expires string, force bool) error {
 	return err
 }
 
-// pushFileGCS uploads a file from the file system to Google Cloud Storage with given category,
-// destination name, and expire duration.
+// pushFileGCS uploads a file from the file system to Google Cloud Storage with given destination
+// name and expire duration.
 func pushFileGCS(dstFilename, srcFilename string, expTime time.Duration) error {
 	f, err := os.Open(srcFilename)
 	if err != nil {
@@ -242,15 +242,15 @@ func pushFileGCS(dstFilename, srcFilename string, expTime time.Duration) error {
 // pullPaths returns source and destination paths to pull a file from Google Cloud Storage.
 // Source path becomes a category prefixed path to the GCS Bucket,
 // destination path becomes a relative path on the file system.
-func pullPaths(category, dstFilename, srcFilename string) (string, string) {
+func pullPaths(dstFilename, srcFilename string) (string, string) {
 	srcFilename = utils.ToRelative(srcFilename)
 	dstFilename = utils.PathFromSource(dstFilename, srcFilename)
-	srcFilename = utils.PrefixedPath(category, srcFilename)
+	srcFilename = utils.PrefixedPath(srcFilename)
 	return dstFilename, srcFilename
 }
 
 // pullGCS downloads a file or directory from the Google Cloud Storage to the file system
-// with given category, and source path.
+// with given destination and source path.
 func pullGCS(dst, src string, force bool) error {
 	isFile, err := isFileSrc(src, true)
 	if err != nil {
@@ -290,12 +290,12 @@ func pullFileGCS(dstFilename, srcFilename string) error {
 
 // yankPath returns path to yank a file from Google Cloud Storage.
 // Path becomes a category prefixed path to the GCS Bucket.
-func yankPath(category, filename string) string {
+func yankPath(filename string) string {
 	filename = utils.ToRelative(filename)
-	return utils.PrefixedPath(category, filename)
+	return utils.PrefixedPath(filename)
 }
 
-// yankGCS deletes a file or directory from the Google Cloud Storage with given category.
+// yankGCS deletes a file or directory from the Google Cloud Storage.
 func yankGCS(name string) error {
 	isFile, err := isFileSrc(name, true)
 	if err != nil {

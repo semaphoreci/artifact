@@ -5,9 +5,10 @@ import (
 	"testing"
 )
 
-func TestPrefixedPath(t *testing.T) {
+func TestPrefixedPathEmptyDefault(t *testing.T) {
 	testPrefixedPath := func(category, filepath, expected string) {
-		result := PrefixedPath(category, filepath)
+		InitPathID(category, "")
+		result := PrefixedPath(filepath)
 		if result != expected {
 			t.Errorf("not match result(%s) with expected(%s) for category(%s) and filepath(%s)",
 				result, expected, category, filepath)
@@ -29,6 +30,34 @@ func TestPrefixedPath(t *testing.T) {
 	testPrefixedPath(WORKFLOW, "path/to/the/deep/x.zip", "/artifacts/workflows/"+workflowID+
 		"/path/to/the/deep/x.zip")
 	testPrefixedPath(JOB, "x.zip", "/artifacts/jobs/"+jobID+"/x.zip")
+}
+
+func TestPrefixedPathSetDefault(t *testing.T) {
+	testPrefixedPath := func(category, filepath, expected string) {
+		InitPathID(category, "fixed")
+		result := PrefixedPath(filepath)
+		if result != expected {
+			t.Errorf("not match result(%s) with expected(%s) for category(%s) and filepath(%s)",
+				result, expected, category, filepath)
+		}
+	}
+
+	projectID := "PR_01"
+	os.Setenv(CategoryEnv[PROJECT], projectID)
+	workflowID := "WF_02"
+	os.Setenv(CategoryEnv[WORKFLOW], workflowID)
+	jobID := "JOB_03"
+	os.Setenv(CategoryEnv[JOB], jobID)
+	fixed := "fixed"
+	testPrefixedPath(JOB, ".", "/artifacts/jobs/"+fixed)
+	testPrefixedPath(JOB, "x.zip", "/artifacts/jobs/"+fixed+"/x.zip")
+	testPrefixedPath(JOB, "y.zip", "/artifacts/jobs/"+fixed+"/y.zip")
+	testPrefixedPath(JOB, "tmp/x.zip", "/artifacts/jobs/"+fixed+"/tmp/x.zip")
+	testPrefixedPath(JOB, "/tmp/x.zip", "/artifacts/jobs/"+fixed+"/tmp/x.zip")
+	testPrefixedPath(PROJECT, "x.zip", "/artifacts/projects/"+fixed+"/x.zip")
+	testPrefixedPath(PROJECT, "path/to/the/deep/x.zip", "/artifacts/projects/"+fixed+
+		"/path/to/the/deep/x.zip")
+	testPrefixedPath(WORKFLOW, "x.zip", "/artifacts/workflows/"+fixed+"/x.zip")
 }
 
 func TestPathFromSource(t *testing.T) {
