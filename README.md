@@ -111,13 +111,13 @@ $HOME/.artifact.yaml or similar, for more, look at [Viper](https://github.com/sp
 ### Artifact paths expire
 
 #### ProjectArtifactsExpire
-Project level artifacts default expire time in the same format as [Alternative forms and flags #3](https://github.com/semaphoreci/artifact#alternative-forms-and-flags).
+Project level artifacts default expire time in the same format as [Alternative forms and flags #3](#alternative-forms-and-flags).
 
 #### WorkflowArtifactsExpire
-Workflow level artifacts default expire time in the same format as [Alternative forms and flags #3](https://github.com/semaphoreci/artifact#alternative-forms-and-flags).
+Workflow level artifacts default expire time in the same format as [Alternative forms and flags #3](#alternative-forms-and-flags).
 
 #### JobArtifactsExpire
-Job level artifacts default expire time in the same format as [Alternative forms and flags #3](https://github.com/semaphoreci/artifact#alternative-forms-and-flags).
+Job level artifacts default expire time in the same format as [Alternative forms and flags #3](#alternative-forms-and-flags).
 
 ## CLI
 
