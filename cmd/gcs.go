@@ -32,6 +32,20 @@ var (
 	}
 )
 
+// init initializes Google Coud Storage with the given bucket name in environment variable.
+// Loads credentials from environment variable too.
+func init() {
+	credFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+	client, err := storage.NewClient(ctx, option.WithCredentialsFile(credFile))
+	if err != nil {
+		panic(fmt.Errorf("Failed to create Google Cloud Storage client: %s", err))
+	}
+
+	bucketName := os.Getenv("BUCKET_NAME")
+	bucket = client.Bucket(bucketName)
+}
+
 // isFileLFS returns if the given path points to a file in the local file system.
 func isFileLFS(filename string) (bool, error) {
 	fi, err := os.Stat(filename)
@@ -87,21 +101,6 @@ func isDirGCS(dirname string) (bool, error) {
 	}
 
 	return false, nil
-}
-
-// initGCS initializes Google Coud Storage with the given bucket name.
-// Loads credentials from environment variable.
-func initGCS() error {
-	credFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
-	client, err := storage.NewClient(ctx, option.WithCredentialsFile(credFile))
-	if err != nil {
-		return fmt.Errorf("Failed to create Google Cloud Storage client: %s", err)
-	}
-
-	bucketName := os.Getenv("BUCKET_NAME")
-	bucket = client.Bucket(bucketName)
-	return nil
 }
 
 // pushPaths returns source and destination paths to push a file to Google Cloud Storage.

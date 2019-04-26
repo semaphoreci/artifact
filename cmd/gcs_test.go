@@ -349,7 +349,7 @@ func TestGCSOverwrite(t *testing.T) {
 	assertNotFile(t, dst)
 	assertNotDir(t, dst)
 
-	err := pushGCS(dst, src, "100", false)
+	err := pushGCS(dst, src, "10d", false)
 	assertNilError(t, "push file to Google Cloud Storage", err)
 	assertFile(t, dst)
 	assertNotDir(t, dst)
@@ -360,7 +360,7 @@ func TestGCSOverwrite(t *testing.T) {
 
 	// trying to overwrite file with a file without force; expectation: fails
 	dst, src = pushPaths("", srcFilename2)
-	err = pushGCS(dst, src, "100", false)
+	err = pushGCS(dst, src, "10d", false)
 	assertAlreadyExists(t, "overwriting file with file without force", err)
 	assertFile(t, dst)
 	assertNotDir(t, dst)
@@ -368,7 +368,7 @@ func TestGCSOverwrite(t *testing.T) {
 
 	// trying to overwrite file with a file with force; expectation: succeeds
 	dst, src = pushPaths("", srcFilename2)
-	err = pushGCS(dst, src, "100", true)
+	err = pushGCS(dst, src, "10d", true)
 	assertNilError(t, "force push file to Google Cloud Storage", err)
 	assertFile(t, dst)
 	assertNotDir(t, dst)
@@ -376,7 +376,7 @@ func TestGCSOverwrite(t *testing.T) {
 
 	// trying to overwrite file with a directory without force; expectation: fails
 	dst, src = pushPaths(gcsFilenameX, d2)
-	err = pushGCS(dst, src, "100", false)
+	err = pushGCS(dst, src, "10d", false)
 	assertAlreadyExists(t, "overwriting file with directory without force", err)
 	assertFile(t, dst)
 	assertNotDir(t, dst)
@@ -384,7 +384,7 @@ func TestGCSOverwrite(t *testing.T) {
 
 	// trying to overwrite file with a directory with force; expectation: succeeds
 	dst, src = pushPaths(gcsFilenameX, d2)
-	err = pushGCS(dst, src, "100", true)
+	err = pushGCS(dst, src, "10d", true)
 	assertNilError(t, "overwriting file with directory with force", err)
 	assertNotFile(t, dst)
 	assertDir(t, dst)
@@ -401,15 +401,20 @@ func TestGCSOverwrite(t *testing.T) {
 
 	// trying to overwrite directory with a directory without force; expectation: fail
 	dst, src = pushPaths(gcsFilenameX, d2)
-	err = pushGCS(dst, src, "100", false)
+	err = pushGCS(dst, src, "10d", false)
 	assertAlreadyExists(t, "overwriting directory with directory without force", err)
 	assertNotFile(t, dst)
 	assertDir(t, dst)
 	compareDir(t, category, compareDDest, gcsFilenameX, expContents)
 
+	d3 := path.Join(d, "x") // this will go up without destination set
+	err = os.Rename(d2, d3)
+	assertNilError(t, "renaming directory", err)
+	srcFilename = path.Join(d3, "z.txt")
+
 	// trying to overwrite directory with a directory with force; expectation: success
-	dst, src = pushPaths(gcsFilenameX, d2)
-	err = pushGCS(dst, src, "100", true)
+	dst, src = pushPaths("", d3)
+	err = pushGCS(dst, src, "10d", true)
 	assertNilError(t, "overwriting directory with directory with force", err)
 	assertNotFile(t, dst)
 	assertDir(t, dst)
@@ -417,7 +422,7 @@ func TestGCSOverwrite(t *testing.T) {
 
 	// trying to overwrite directory with a file without force; expectation: fails
 	dst, src = pushPaths("", srcFilename2)
-	err = pushGCS(dst, src, "100", false)
+	err = pushGCS(dst, src, "10d", false)
 	assertAlreadyExists(t, "overwriting directory with file without force", err)
 	assertNotFile(t, dst)
 	assertDir(t, dst)
@@ -425,7 +430,7 @@ func TestGCSOverwrite(t *testing.T) {
 
 	// trying to overwrite directory with a file with force; expectation: succeeds
 	dst, src = pushPaths(gcsFilenameX, srcFilename)
-	err = pushGCS(dst, src, "100", true)
+	err = pushGCS(dst, src, "10d", true)
 	assertNilError(t, "force push file to Google Cloud Storage", err)
 	assertFile(t, dst)
 	assertNotDir(t, dst)

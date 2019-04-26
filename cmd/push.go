@@ -5,6 +5,7 @@ import (
 
 	"github.com/semaphoreci/artifact/cmd/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // pushCmd represents the push command
@@ -15,7 +16,8 @@ var pushCmd = &cobra.Command{
 while the rest of the semaphore process, or after it.`,
 }
 
-func runPushForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
+func runPushForCategory(cmd *cobra.Command, args []string, category, catID,
+	expireDefault string) (string, string) {
 	utils.InitPathID(category, catID)
 	src := args[0]
 
@@ -27,6 +29,9 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID strin
 
 	expireIn, err := cmd.Flags().GetString("expire-in")
 	utils.Check(err)
+	if len(expireIn) == 0 {
+		expireIn = expireDefault
+	}
 
 	dst, src = pushPaths(dst, src)
 	err = pushGCS(dst, src, expireIn, force)
@@ -44,7 +49,8 @@ var PushJobCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("job-id")
 		utils.Check(err)
-		dst, src := runPushForCategory(cmd, args, utils.JOB, catID)
+		dst, src := runPushForCategory(cmd, args, utils.JOB, catID,
+			viper.GetString("JobArtifactsExpire"))
 		fmt.Printf("File '%s' pushed to '%s' for current job.\n", src, dst)
 	},
 }
@@ -59,7 +65,8 @@ var PushWorkflowCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("workflow-id")
 		utils.Check(err)
-		dst, src := runPushForCategory(cmd, args, utils.WORKFLOW, catID)
+		dst, src := runPushForCategory(cmd, args, utils.WORKFLOW, catID,
+			viper.GetString("WorkflowArtifactsExpire"))
 		fmt.Printf("File '%s' pushed to '%s' for current workflow.\n", src, dst)
 	},
 }
@@ -72,7 +79,8 @@ var PushProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPushForCategory(cmd, args, utils.PROJECT, "")
+		dst, src := runPushForCategory(cmd, args, utils.PROJECT, "",
+			viper.GetString("ProjectArtifactsExpire"))
 		fmt.Printf("File '%s' pushed to '%s' for current project.\n", src, dst)
 	},
 }
