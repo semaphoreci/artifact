@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/semaphoreci/artifact/cmd/utils"
+	"github.com/semaphoreci/artifact/internal"
+	"github.com/semaphoreci/artifact/pkg/gcs"
+	"github.com/semaphoreci/artifact/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -14,9 +16,22 @@ var pullCmd = &cobra.Command{
 	Long: `You may store files project, workflow or job related files with
 artifact push. With artifact pull you can download them to the current directory
 to use them in a later phase, debug, or getting the results.`,
-	// Run: func(cmd *cobra.Command, args []string) {
-	// 	fmt.Println("pull called")
-	// },
+}
+
+func runPullForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
+	utils.InitPathID(category, catID)
+	src := args[0]
+
+	dst, err := cmd.Flags().GetString("destination")
+	internal.Check(err)
+
+	force, err := cmd.Flags().GetBool("force")
+	internal.Check(err)
+
+	dst, src = gcs.PullPaths(dst, src)
+	err = gcs.PullGCS(dst, src, force)
+	internal.Check(err)
+	return dst, src
 }
 
 // PullJobCmd is the subcommand for "artifact pull job ..."
@@ -27,13 +42,9 @@ var PullJobCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		src := args[0]
-
-		dst, err := cmd.Flags().GetString("destination")
-		utils.Check(err)
-
-		dst, src, err = pullFileGCS(utils.JOB, dst, src)
-		utils.Check(err)
+		catID, err := cmd.Flags().GetString("job-id")
+		internal.Check(err)
+		dst, src := runPullForCategory(cmd, args, utils.JOB, catID)
 		fmt.Printf("File '%s' pulled to '%s' for current job.\n", src, dst)
 	},
 }
@@ -46,13 +57,9 @@ var PullWorkflowCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		src := args[0]
-
-		dst, err := cmd.Flags().GetString("destination")
-		utils.Check(err)
-
-		dst, src, err = pullFileGCS(utils.WORKFLOW, dst, src)
-		utils.Check(err)
+		catID, err := cmd.Flags().GetString("workflow-id")
+		internal.Check(err)
+		dst, src := runPullForCategory(cmd, args, utils.WORKFLOW, catID)
 		fmt.Printf("File '%s' pulled to '%s' for current workflow.\n", src, dst)
 	},
 }
@@ -65,13 +72,7 @@ var PullProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		src := args[0]
-
-		dst, err := cmd.Flags().GetString("destination")
-		utils.Check(err)
-
-		dst, src, err = pullFileGCS(utils.PROJECT, dst, src)
-		utils.Check(err)
+		dst, src := runPullForCategory(cmd, args, utils.PROJECT, "")
 		fmt.Printf("File '%s' pulled to '%s' for current project.\n", src, dst)
 	},
 }
@@ -87,4 +88,12 @@ func init() {
 	PullJobCmd.Flags().StringP("destination", "d", "", desc)
 	PullWorkflowCmd.Flags().StringP("destination", "d", "", desc)
 	PullProjectCmd.Flags().StringP("destination", "d", "", desc)
+
+	desc = "force overwrite"
+	PullJobCmd.Flags().BoolP("force", "f", false, desc)
+	PullWorkflowCmd.Flags().BoolP("force", "f", false, desc)
+	PullProjectCmd.Flags().BoolP("force", "f", false, desc)
+
+	PullJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
+	PullWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
 }

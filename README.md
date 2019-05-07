@@ -5,6 +5,7 @@
 - [Use-cases](#use-cases)
 - [Init](#init)
 - [Concepts](#concepts)
+- [Configs](#configs)
 - [CLI](#cli)
   - [push](#push)
   - [pull](#pull)
@@ -18,9 +19,8 @@
 
 ## Init
 
-For initiating the repo:
-1. Add the Google Cloud Storage credential file to ../artifacts-play-84f9d6266402.json relative to this directory.
-2. symlink pre-commit script with `ln -s ../../script/pre-commit .git/hooks/`
+* For local testing, add the Google Cloud Storage credential file to ../artifacts-play-84f9d6266402.json relative to this directory.
+* Before committing anything, symlink pre-commit script with `ln -s ../../script/pre-commit .git/hooks/`
 
 ## Concepts
 
@@ -49,6 +49,7 @@ artifact pull project myapp-v3.tar
 ```
 
 From your development environment:
+TODO: this is not done yet
 
 ```sh
 sem artifact push project --project payment-api myapp-v3.tar
@@ -56,7 +57,6 @@ sem artifact pull project -p payment-api myapp-v3.tar
 ```
 
 You can also view and download your artifacts from project page in the UI.
-
 
 ### Workflow level
 
@@ -72,6 +72,7 @@ artifact pull workflow myapp-v3.tar
 ```
 
 From your development environment:
+TODO: this is not done yet
 
 ```sh
 sem artifact push workflow --workflow <WORKFLOW_ID> myapp-v3.tar
@@ -94,6 +95,7 @@ artifact pull job logs/build.log
 ```
 
 From your development environment:
+TODO: this is not done yet
 
 ```sh
 sem artifact push job --job <JOB_ID> logs/build.log
@@ -101,6 +103,21 @@ sem artifact pull job -p <JOB_ID> logs/build.log
 ```
 
 You can also view and download artifacts on the job page in the UI.
+
+## Configs
+
+$HOME/.artifact.yaml or similar, for more, look at [Viper](https://github.com/spf13/viper#remote-keyvalue-store-support).
+
+### Artifact paths expire
+
+#### ProjectArtifactsExpire
+Project level artifacts default expire time in the same format as [Alternative forms and flags #3](#alternative-forms-and-flags).
+
+#### WorkflowArtifactsExpire
+Workflow level artifacts default expire time in the same format as [Alternative forms and flags #3](#alternative-forms-and-flags).
+
+#### JobArtifactsExpire
+Job level artifacts default expire time in the same format as [Alternative forms and flags #3](#alternative-forms-and-flags).
 
 ## CLI
 
@@ -114,33 +131,23 @@ Uploads file or path into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip`.
 
 ###### Example 1: Uploading nested file.
 
-`artifact push job logs/webserver/access.log` pushs file into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/log/webserver/access.log`
+`artifact push job logs/webserver/access.log` pushes file into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/log/webserver/access.log`
 
 ###### Example 2: Uploading directory
 
-`artifact push job myapp/v1/logs/webserver` pushs directory with all sub directories and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/webserver`
+`artifact push job myapp/v1/logs/webserver` pushes directory with all sub directories and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/webserver`
 
-`artifact push job /var/semaphore/webserver/logs/testxyz` pushs directory with all sub directories and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/testxyz`
-
-__We are relying on semantics of UNIX__
-
-`cp -r /var/semaphore/webserver/logs/testxyz /tmp`
-
-`cp /var/semaphore/webserver/logs/testxyz /tmp`
-
-`cp -r webserver/logs/testxyz /tmp`
-
-End result for both examples above: `/tmp/testxyz`
+`artifact push job /var/semaphore/webserver/logs/testxyz` pushes directory with all sub directories and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/testxyz`
 
 ##### Alternative forms and flags
 
 1. `--destination` or `-d` sets destination directory or file path
 
-`artifact push job x.zip -d y.zip` pushs file into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/y.zip`.
+`artifact push job x.zip -d y.zip` pushes file into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/y.zip`.
 
-Example for directory: `artifact push job logs/webserver --destination debuglogs` pushs all sub-dirs and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/debuglogs`.
+Example for directory: `artifact push job logs/webserver --destination debuglogs` pushes all sub-dirs and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/debuglogs`.
 
-Example for deeply nested directory as destination: `artifact push job logs/webserver --destination path/to/debuglogs` pushs all sub-dirs and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/path/to/debuglogs`.
+Example for deeply nested directory as destination: `artifact push job logs/webserver --destination path/to/debuglogs` pushes all sub-dirs and files into `/artifacts/jobs/<SEMAPHORE_JOB_ID>/path/to/debuglogs`.
 
 2. `--job <job-id>` or `-j <job-id>`
 
@@ -151,8 +158,7 @@ By default command is looking for `SEMAPHORE_JOB_ID` env var. If it's not availa
 Expires - deletes the files or directories after amount of time specified.
 
 Supported options are:
-- just integer (number of seconds)
-- `Nh` for N hours
+- `never` or `Never` means it never expires
 - `Nd` for N days
 - `Nw` for N weeks
 - `Nm` for N months
@@ -199,7 +205,7 @@ Example with directory: `artifact pull job logs`, if logs is directory `logs` it
 
 1. `--destination` or `-d` sets destination directory or file path
 
-`artifact pull job x.zip -d z.zip` pushs file into `z.zip`.
+`artifact pull job x.zip -d z.zip` pushes file into `z.zip`.
 
 Example for directory: `artifact pull job logs --destination debuglogs` pulls all sub-dirs and files into `debuglogs` locally.
 
@@ -243,6 +249,7 @@ Example for directory: `artifact yank job logs` deletes `/artifacts/jobs/<SEMAPH
 `artifact yank project x.zip` deletes `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip`
 
 ## list
+TODO: this is not done yet
 
 #### `artifact list`
 
