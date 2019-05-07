@@ -6,14 +6,16 @@ import (
 	"strings"
 )
 
-// PROJECT represents project in command line arguments for push, pull and yank commands.
-const PROJECT = "project"
-
-// WORKFLOW represents workflow in command line arguments for push, pull and yank commands.
-const WORKFLOW = "workflow"
-
-// JOB represents job in command line arguments for push, pull and yank commands.
-const JOB = "job"
+const (
+	// PROJECT represents project in command line arguments for push, pull and yank commands.
+	PROJECT = "project"
+	// WORKFLOW represents workflow in command line arguments for push, pull and yank commands.
+	WORKFLOW = "workflow"
+	// JOB represents job in command line arguments for push, pull and yank commands.
+	JOB = "job"
+	// ExpirePrefix is where object expires are stored in the same bucket.
+	ExpirePrefix = "/var/expires-in/"
+)
 
 var (
 	pluralCategory = map[string]string{

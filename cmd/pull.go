@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/semaphoreci/artifact/cmd/utils"
+	"github.com/semaphoreci/artifact/internal"
+	"github.com/semaphoreci/artifact/pkg/gcs"
+	"github.com/semaphoreci/artifact/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -21,14 +23,14 @@ func runPullForCategory(cmd *cobra.Command, args []string, category, catID strin
 	src := args[0]
 
 	dst, err := cmd.Flags().GetString("destination")
-	utils.Check(err)
+	internal.Check(err)
 
 	force, err := cmd.Flags().GetBool("force")
-	utils.Check(err)
+	internal.Check(err)
 
-	dst, src = pullPaths(dst, src)
-	err = pullGCS(dst, src, force)
-	utils.Check(err)
+	dst, src = gcs.PullPaths(dst, src)
+	err = gcs.PullGCS(dst, src, force)
+	internal.Check(err)
 	return dst, src
 }
 
@@ -41,7 +43,7 @@ var PullJobCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("job-id")
-		utils.Check(err)
+		internal.Check(err)
 		dst, src := runPullForCategory(cmd, args, utils.JOB, catID)
 		fmt.Printf("File '%s' pulled to '%s' for current job.\n", src, dst)
 	},
@@ -56,7 +58,7 @@ var PullWorkflowCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("workflow-id")
-		utils.Check(err)
+		internal.Check(err)
 		dst, src := runPullForCategory(cmd, args, utils.WORKFLOW, catID)
 		fmt.Printf("File '%s' pulled to '%s' for current workflow.\n", src, dst)
 	},

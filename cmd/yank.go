@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/semaphoreci/artifact/cmd/utils"
+	"github.com/semaphoreci/artifact/internal"
+	"github.com/semaphoreci/artifact/pkg/gcs"
+	"github.com/semaphoreci/artifact/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -20,9 +22,9 @@ func runYankForCategory(cmd *cobra.Command, args []string, category, catID strin
 	utils.InitPathID(category, catID)
 	name := args[0]
 
-	name = yankPath(name)
-	err := yankGCS(name)
-	utils.Check(err)
+	name = gcs.YankPath(name)
+	err := gcs.YankGCS(name)
+	internal.Check(err)
 	return name
 }
 
@@ -35,7 +37,7 @@ var YankJobCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("job-id")
-		utils.Check(err)
+		internal.Check(err)
 		name := runYankForCategory(cmd, args, utils.JOB, catID)
 		fmt.Printf("File '%s' deleted for current job.\n", name)
 	},
@@ -50,7 +52,7 @@ var YankWorkflowCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("workflow-id")
-		utils.Check(err)
+		internal.Check(err)
 		name := runYankForCategory(cmd, args, utils.WORKFLOW, catID)
 		fmt.Printf("File '%s' deleted for current workflow.\n", name)
 	},

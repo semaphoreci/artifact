@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/semaphoreci/artifact/cmd/utils"
+	"github.com/semaphoreci/artifact/internal"
+	"github.com/semaphoreci/artifact/pkg/gcs"
+	"github.com/semaphoreci/artifact/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -22,20 +24,20 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID,
 	src := args[0]
 
 	dst, err := cmd.Flags().GetString("destination")
-	utils.Check(err)
+	internal.Check(err)
 
 	force, err := cmd.Flags().GetBool("force")
-	utils.Check(err)
+	internal.Check(err)
 
 	expireIn, err := cmd.Flags().GetString("expire-in")
-	utils.Check(err)
+	internal.Check(err)
 	if len(expireIn) == 0 {
 		expireIn = expireDefault
 	}
 
-	dst, src = pushPaths(dst, src)
-	err = pushGCS(dst, src, expireIn, force)
-	utils.Check(err)
+	dst, src = gcs.PushPaths(dst, src)
+	_, err = gcs.PushGCS(dst, src, expireIn, force)
+	internal.Check(err)
 	return dst, src
 }
 
@@ -48,7 +50,7 @@ var PushJobCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("job-id")
-		utils.Check(err)
+		internal.Check(err)
 		dst, src := runPushForCategory(cmd, args, utils.JOB, catID,
 			viper.GetString("JobArtifactsExpire"))
 		fmt.Printf("File '%s' pushed to '%s' for current job.\n", src, dst)
@@ -64,7 +66,7 @@ var PushWorkflowCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("workflow-id")
-		utils.Check(err)
+		internal.Check(err)
 		dst, src := runPushForCategory(cmd, args, utils.WORKFLOW, catID,
 			viper.GetString("WorkflowArtifactsExpire"))
 		fmt.Printf("File '%s' pushed to '%s' for current workflow.\n", src, dst)

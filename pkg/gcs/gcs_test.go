@@ -1,18 +1,17 @@
-package cmd
+package gcs
 
 import (
 	"bufio"
 	"bytes"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime/debug"
-
-	"path"
 	"testing"
-	"time"
 
-	"github.com/semaphoreci/artifact/cmd/utils"
+	"github.com/semaphoreci/artifact/internal"
+	"github.com/semaphoreci/artifact/pkg/utils"
 )
 
 var (
@@ -20,27 +19,10 @@ var (
 	content2 = []byte("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam lacus massa, porttitor non euismod vel, volutpat eget metus. Maecenas finibus interdum ante id rhoncus. Mauris sodales congue volutpat. Integer scelerisque elit nec lectus varius luctus. Ut tempor orci at tellus facilisis interdum. In scelerisque nec sem vitae euismod. Suspendisse nibh nulla, egestas varius tortor quis, hendrerit cursus urna. Maecenas eu risus ligula. Sed eu tortor orci. Donec mattis cursus gravida.")
 )
 
-func assertNilError(t *testing.T, msg string, args ...interface{}) {
-	if args[len(args)-1] != nil {
-		t.Fatalf(msg+" should be nil, but it's: %s; stack: %s", append(args, string(debug.Stack()))...)
-	}
-}
-
-func assertTrue(t *testing.T, ok bool, msg string, args ...interface{}) {
-	if !ok {
-		t.Fatalf(msg+"; stack: %s", append(args, string(debug.Stack()))...)
-	}
-}
-
-func assertAlreadyExists(t *testing.T, msg string, err error) {
-	_, ok := err.(*ErrAlreadyExists)
-	assertTrue(t, ok, msg+" should fail with an ErrAlreadyExists, but it's: %s", err)
-}
-
 func TestPushPathsEmptyDefault(t *testing.T) {
 	testPushPaths := func(category, dst, src, expDst, expSrc string) {
 		utils.InitPathID(category, "")
-		resultDst, resultSrc := pushPaths(dst, src)
+		resultDst, resultSrc := PushPaths(dst, src)
 		if resultDst != expDst {
 			t.Errorf("not match destination(%s) with expected(%s) for category(%s), dst(%s) and src(%s)",
 				resultDst, expDst, category, dst, src)
@@ -78,7 +60,7 @@ func TestPushPathsEmptyDefault(t *testing.T) {
 func TestPushPathsSetDefault(t *testing.T) {
 	testPushPaths := func(category, dst, src, expDst, expSrc string) {
 		utils.InitPathID(category, "fixed")
-		resultDst, resultSrc := pushPaths(dst, src)
+		resultDst, resultSrc := PushPaths(dst, src)
 		if resultDst != expDst {
 			t.Errorf("not match destination(%s) with expected(%s) for category(%s), dst(%s) and src(%s)",
 				resultDst, expDst, category, dst, src)
@@ -117,7 +99,7 @@ func TestPushPathsSetDefault(t *testing.T) {
 func TestPullPathsEmptyDefault(t *testing.T) {
 	testPullPaths := func(category, dst, src, expDst, expSrc string) {
 		utils.InitPathID(category, "")
-		resultDst, resultSrc := pullPaths(dst, src)
+		resultDst, resultSrc := PullPaths(dst, src)
 		if resultDst != expDst {
 			t.Errorf("not match destination(%s) with expected(%s) for category(%s), dst(%s) and src(%s)",
 				resultDst, expDst, category, dst, src)
@@ -155,7 +137,7 @@ func TestPullPathsEmptyDefault(t *testing.T) {
 func TestPullPathsSetDefault(t *testing.T) {
 	testPullPaths := func(category, dst, src, expDst, expSrc string) {
 		utils.InitPathID(category, "fixed")
-		resultDst, resultSrc := pullPaths(dst, src)
+		resultDst, resultSrc := PullPaths(dst, src)
 		if resultDst != expDst {
 			t.Errorf("not match destination(%s) with expected(%s) for category(%s), dst(%s) and src(%s)",
 				resultDst, expDst, category, dst, src)
@@ -200,14 +182,12 @@ func skipShort(t *testing.T) {
 func TestGCS(t *testing.T) {
 	skipShort(t)
 	filename := path.Join("test", "artifact", "x.zip")
-	err := writeGCS(filename, bytes.NewReader(content), time.Second*10)
+	err := WriteGCS(filename, bytes.NewReader(content))
 	assertNilError(t, "writing to Google Cloud Storage", err)
-
-	// TODO: test expire when it's implemented
 
 	var b bytes.Buffer
 	writer := bufio.NewWriter(&b)
-	err = readGCS(writer, filename)
+	err = ReadGCS(writer, filename)
 	assertNilError(t, "reading from Google Cloud Storage", err)
 	writer.Flush()
 	if !bytes.Equal(b.Bytes(), content) {
@@ -215,7 +195,7 @@ func TestGCS(t *testing.T) {
 			string(content))
 	}
 
-	err = delGCS(filename)
+	err = DelGCS(filename)
 	assertNilError(t, "deleting from Google Cloud Storage", err)
 }
 
@@ -236,6 +216,18 @@ func createFileWithContent(t *testing.T, name string, content []byte, expContent
 	_, err = f.Write(content)
 	assertNilError(t, "writing to source tmp file", err)
 	expContents[path.Base(name)] = content
+}
+
+func assertNilError(t *testing.T, msg string, args ...interface{}) {
+	if args[len(args)-1] != nil {
+		t.Fatalf(msg+" should be nil, but it's: %s; stack: %s", append(args, string(debug.Stack()))...)
+	}
+}
+
+func assertTrue(t *testing.T, ok bool, msg string, args ...interface{}) {
+	if !ok {
+		t.Fatalf(msg+"; stack: %s", append(args, string(debug.Stack()))...)
+	}
 }
 
 func assertFile(t *testing.T, name string) {
@@ -262,13 +254,26 @@ func assertNotDir(t *testing.T, name string) {
 	assertTrue(t, !ok, "%s should NOT be a directory in Google Cloud Storage, found a directory", name)
 }
 
+func assertAlreadyExists(t *testing.T, msg string, err error) {
+	_, ok := err.(*internal.ErrAlreadyExists)
+	assertTrue(t, ok, msg+" should fail with an ErrAlreadyExists, but it's: %s", err)
+}
+
+func assertEmptyString(t *testing.T, msg, strToTest string) {
+	assertTrue(t, len(strToTest) == 0, msg+" should be an empty string, but it's: %s")
+}
+
+func assertNonEmptyString(t *testing.T, msg, strToTest string) {
+	assertTrue(t, len(strToTest) > 0, msg+" should NOT be an empty string, but it's empty")
+}
+
 func compareFile(t *testing.T, category, dst, src string, expContent []byte, expAlready bool) {
 	utils.InitPathID(category, "")
-	dst, src = pullPaths(dst, src)
-	err := pullGCS(dst, src, false)
+	dst, src = PullPaths(dst, src)
+	err := PullGCS(dst, src, false)
 	if expAlready {
 		assertAlreadyExists(t, "Pulling file to compare", err)
-		err = pullGCS(dst, src, true)
+		err = PullGCS(dst, src, true)
 	}
 	assertNilError(t, "Pulling file to compare", err)
 
@@ -281,13 +286,23 @@ func compareFile(t *testing.T, category, dst, src string, expContent []byte, exp
 	}
 }
 
+func compareExpire(t *testing.T, src string, expContent string) {
+	var b bytes.Buffer
+	err := ReadGCS(&b, src)
+	assertNilError(t, "Pulling expire to compare", err)
+	if !bytes.Equal(b.Bytes(), []byte(expContent)) {
+		t.Errorf("downloaded expire file content(%s) doesn't match previously uploaded(%s)",
+			b.String(), expContent)
+	}
+}
+
 func compareDir(t *testing.T, category, dst, src string, expContents map[string][]byte) {
 	utils.InitPathID(category, "")
-	dst, src = pullPaths(dst, src)
+	dst, src = PullPaths(dst, src)
 	os.Mkdir(dst, 0777)
-	err := pullGCS(dst, src, false)
+	err := PullGCS(dst, src, false)
 	assertAlreadyExists(t, "Pulling directory to compare", err)
-	err = pullGCS(dst, src, true)
+	err = PullGCS(dst, src, true)
 	assertNilError(t, "Pulling directory to compare", err)
 
 	// copy map, so we can remove from it
@@ -326,7 +341,7 @@ func compareDir(t *testing.T, category, dst, src string, expContents map[string]
 
 func TestGCSOverwrite(t *testing.T) {
 	skipShort(t)
-	delDirGCS("/artifacts")
+	DelDirGCS("/artifacts")
 
 	compareD := createTmpDir(t)
 	defer os.RemoveAll(compareD)
@@ -345,50 +360,64 @@ func TestGCSOverwrite(t *testing.T) {
 	category := utils.JOB
 	utils.InitPathID(category, "")
 	gcsFilenameX := "x"
-	dst, src := pushPaths(gcsFilenameX, srcFilename)
+	dst, src := PushPaths(gcsFilenameX, srcFilename)
 	assertNotFile(t, dst)
 	assertNotDir(t, dst)
 
-	err := pushGCS(dst, src, "10d", false)
+	expireFilename, err := PushGCS(dst, src, "10d", false)
 	assertNilError(t, "push file to Google Cloud Storage", err)
+	assertNonEmptyString(t, "succesful expire", expireFilename)
+	compareExpire(t, expireFilename, dst)
 	assertFile(t, dst)
 	assertNotDir(t, dst)
 	compareFile(t, category, compareDDest, gcsFilenameX, content, false)
+	err = DelGCS(expireFilename)
+	assertNilError(t, "delete expire file from Google Cloud Storage", err)
 
 	srcFilename2 := path.Join(d2, "x")
 	createFileWithContent(t, srcFilename2, content2, expContents)
 
 	// trying to overwrite file with a file without force; expectation: fails
-	dst, src = pushPaths("", srcFilename2)
-	err = pushGCS(dst, src, "10d", false)
+	dst, src = PushPaths("", srcFilename2)
+	expireFilename, err = PushGCS(dst, src, "10d", false)
 	assertAlreadyExists(t, "overwriting file with file without force", err)
+	assertEmptyString(t, "failed expire", expireFilename)
 	assertFile(t, dst)
 	assertNotDir(t, dst)
 	compareFile(t, category, compareDDest, gcsFilenameX, content, true)
 
 	// trying to overwrite file with a file with force; expectation: succeeds
-	dst, src = pushPaths("", srcFilename2)
-	err = pushGCS(dst, src, "10d", true)
+	dst, src = PushPaths("", srcFilename2)
+	expireFilename, err = PushGCS(dst, src, "10d", true)
 	assertNilError(t, "force push file to Google Cloud Storage", err)
+	assertNonEmptyString(t, "succesful expire", expireFilename)
+	compareExpire(t, expireFilename, dst)
 	assertFile(t, dst)
 	assertNotDir(t, dst)
 	compareFile(t, category, compareDDest, gcsFilenameX, content2, true)
+	err = DelGCS(expireFilename)
+	assertNilError(t, "delete expire file from Google Cloud Storage", err)
 
 	// trying to overwrite file with a directory without force; expectation: fails
-	dst, src = pushPaths(gcsFilenameX, d2)
-	err = pushGCS(dst, src, "10d", false)
+	dst, src = PushPaths(gcsFilenameX, d2)
+	expireFilename, err = PushGCS(dst, src, "10d", false)
 	assertAlreadyExists(t, "overwriting file with directory without force", err)
+	assertEmptyString(t, "failed expire", expireFilename)
 	assertFile(t, dst)
 	assertNotDir(t, dst)
 	compareFile(t, category, compareDDest, gcsFilenameX, content2, true)
 
 	// trying to overwrite file with a directory with force; expectation: succeeds
-	dst, src = pushPaths(gcsFilenameX, d2)
-	err = pushGCS(dst, src, "10d", true)
+	dst, src = PushPaths(gcsFilenameX, d2)
+	expireFilename, err = PushGCS(dst, src, "10d", true)
 	assertNilError(t, "overwriting file with directory with force", err)
+	assertNonEmptyString(t, "succesful expire", expireFilename)
+	compareExpire(t, expireFilename, dst)
 	assertNotFile(t, dst)
 	assertDir(t, dst)
 	compareDir(t, category, compareDDest, gcsFilenameX, expContents)
+	err = DelGCS(expireFilename)
+	assertNilError(t, "delete expire file from Google Cloud Storage", err)
 
 	// new directory content
 	expContents2 := map[string][]byte{}
@@ -400,9 +429,10 @@ func TestGCSOverwrite(t *testing.T) {
 	createFileWithContent(t, srcFilename, content, expContents2)
 
 	// trying to overwrite directory with a directory without force; expectation: fail
-	dst, src = pushPaths(gcsFilenameX, d2)
-	err = pushGCS(dst, src, "10d", false)
+	dst, src = PushPaths(gcsFilenameX, d2)
+	expireFilename, err = PushGCS(dst, src, "10d", false)
 	assertAlreadyExists(t, "overwriting directory with directory without force", err)
+	assertEmptyString(t, "failed expire", expireFilename)
 	assertNotFile(t, dst)
 	assertDir(t, dst)
 	compareDir(t, category, compareDDest, gcsFilenameX, expContents)
@@ -413,31 +443,40 @@ func TestGCSOverwrite(t *testing.T) {
 	srcFilename = path.Join(d3, "z.txt")
 
 	// trying to overwrite directory with a directory with force; expectation: success
-	dst, src = pushPaths("", d3)
-	err = pushGCS(dst, src, "10d", true)
+	dst, src = PushPaths("", d3)
+	expireFilename, err = PushGCS(dst, src, "10d", true)
 	assertNilError(t, "overwriting directory with directory with force", err)
+	assertNonEmptyString(t, "succesful expire", expireFilename)
+	compareExpire(t, expireFilename, dst)
 	assertNotFile(t, dst)
 	assertDir(t, dst)
 	compareDir(t, category, compareDDest, gcsFilenameX, expContents2)
+	err = DelGCS(expireFilename)
+	assertNilError(t, "delete expire file from Google Cloud Storage", err)
 
 	// trying to overwrite directory with a file without force; expectation: fails
-	dst, src = pushPaths("", srcFilename2)
-	err = pushGCS(dst, src, "10d", false)
+	dst, src = PushPaths("", srcFilename2)
+	expireFilename, err = PushGCS(dst, src, "10d", false)
 	assertAlreadyExists(t, "overwriting directory with file without force", err)
+	assertEmptyString(t, "failed expire", expireFilename)
 	assertNotFile(t, dst)
 	assertDir(t, dst)
 	compareDir(t, category, compareDDest, gcsFilenameX, expContents2)
 
 	// trying to overwrite directory with a file with force; expectation: succeeds
-	dst, src = pushPaths(gcsFilenameX, srcFilename)
-	err = pushGCS(dst, src, "10d", true)
+	dst, src = PushPaths(gcsFilenameX, srcFilename)
+	expireFilename, err = PushGCS(dst, src, "10d", true)
 	assertNilError(t, "force push file to Google Cloud Storage", err)
+	assertNonEmptyString(t, "succesful expire", expireFilename)
+	compareExpire(t, expireFilename, dst)
 	assertFile(t, dst)
 	assertNotDir(t, dst)
 	compareFile(t, category, compareDDest, gcsFilenameX, content, true)
+	err = DelGCS(expireFilename)
+	assertNilError(t, "delete expire file from Google Cloud Storage", err)
 
-	filename := yankPath(gcsFilenameX)
-	err = yankGCS(filename)
+	filename := YankPath(gcsFilenameX)
+	err = YankGCS(filename)
 	assertNilError(t, "yank file from Google Cloud Storage", err)
 	assertNotFile(t, filename)
 	assertNotDir(t, filename)

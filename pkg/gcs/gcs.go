@@ -1,18 +1,27 @@
-package cmd
+package gcs
 
 import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/semaphoreci/artifact/cmd/utils"
+	"github.com/semaphoreci/artifact/internal"
+	"github.com/semaphoreci/artifact/pkg/utils"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+)
+
+const (
+	randPostfixLen = 6
+	randChars      = "abcdefghijklmnopqrstuvwxyz0123456789"
 )
 
 var (
@@ -80,33 +89,33 @@ func isFileGCS(filename string) (bool, error) {
 	if err == storage.ErrObjectNotExist {
 		return false, nil
 	}
-	return false, &ErrUnknownGCS{filename}
+	return false, &internal.ErrUnknownGCS{filename}
 }
 
 // isDirGCS returns if the given directory exists on the Google Cloud Storage.
 func isDirGCS(dirname string) (bool, error) {
 	err := walkGCS(dirname+"/", func(filename string, info os.FileInfo, err error) error {
 		if err != nil {
-			return &ErrUnknownGCS{filename}
+			return &internal.ErrUnknownGCS{filename}
 		}
-		return ErrDirectoryFoundGCS
+		return internal.ErrDirectoryFoundGCS
 	})
 
-	if err == ErrDirectoryFoundGCS {
+	if err == internal.ErrDirectoryFoundGCS {
 		return true, nil
 	}
 
-	if _, ok := err.(*ErrUnknownGCS); ok {
+	if _, ok := err.(*internal.ErrUnknownGCS); ok {
 		return true, err
 	}
 
 	return false, nil
 }
 
-// pushPaths returns source and destination paths to push a file to Google Cloud Storage.
+// PushPaths returns source and destination paths to push a file to Google Cloud Storage.
 // Source path becomes a relative path on the file system, destination path becomes a category
 // prefixed path to the GCS Bucket.
-func pushPaths(dstFilename, srcFilename string) (string, string) {
+func PushPaths(dstFilename, srcFilename string) (string, string) {
 	dstFilename = utils.ToRelative(dstFilename)
 	dstFilename = utils.PrefixedPathFromSource(dstFilename, srcFilename)
 	return dstFilename, srcFilename
@@ -130,16 +139,16 @@ func doesExist(dst string, force, isFile, isGCS bool) (bool, error) {
 		if force {
 			if isFile {
 				if isGCS {
-					return true, delGCS(dst)
+					return true, DelGCS(dst)
 				}
 				return true, os.Remove(dst)
 			}
 			if isGCS {
-				return true, delDirGCS(dst)
+				return true, DelDirGCS(dst)
 			}
 			return true, os.RemoveAll(dst)
 		}
-		return true, &ErrAlreadyExists{dst, locIsGCS[isGCS]}
+		return true, &internal.ErrAlreadyExists{dst, locIsGCS[isGCS]}
 	}
 	return false, nil
 }
@@ -173,7 +182,7 @@ func isFileSrc(src string, isGCS bool) (bool, error) {
 	if ok {
 		return false, nil
 	}
-	return false, &ErrNotFound{src, locIsGCS[isGCS]}
+	return false, &internal.ErrNotFound{src, locIsGCS[isGCS]}
 }
 
 // walkGCS works like filepath.Walk, with an empty os.FileInfo, without the directories.
@@ -193,28 +202,29 @@ func walkGCS(dirname string, wf filepath.WalkFunc) error {
 	return nil
 }
 
-// pushGCS uploads a file or directory from the file system to Google Cloud Storage
-// with given destination name, and human readable expire string.
-func pushGCS(dst, src, expires string, force bool) error {
+// PushGCS uploads a file or directory from the file system to Google Cloud Storage to given destination
+// with a human readable expire string. Returns expire filename and error, if happened any.
+func PushGCS(dst, src, expires string, force bool) (string, error) {
 	expTime, err := utils.ParseRelativeAgeForHumans(expires)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	isFile, err := isFileSrc(src, false)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if err = isFileDst(dst, force, true); err != nil {
-		return err
+		return "", err
 	}
 
 	if isFile {
-		return pushFileGCS(dst, src, expTime)
+		return PushFileGCS(dst, src, expTime)
 	}
 
 	prefLen := len(src)
+	anySuccess := false
 	err = filepath.Walk(src, func(filename string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -222,35 +232,96 @@ func pushGCS(dst, src, expires string, force bool) error {
 		if info.IsDir() {
 			return nil
 		}
-		return pushFileGCS(path.Join(dst, filename[prefLen:]), filename, expTime)
+		if _, err = PushFileGCS(path.Join(dst, filename[prefLen:]), filename, 0); err == nil {
+			anySuccess = true
+		}
+		return err
 	})
-	return err
+
+	if anySuccess { // there was at least one object created: expire needs to be created also
+		return CreateExpireFile(dst, expTime), err
+	}
+
+	return "", err
 }
 
-// pushFileGCS uploads a file from the file system to Google Cloud Storage with given destination
-// name and expire duration.
-func pushFileGCS(dstFilename, srcFilename string, expTime time.Duration) error {
+func randomString() (string, error) {
+	output := make([]byte, randPostfixLen)
+	randomness := make([]byte, randPostfixLen)
+
+	// generate some random bytes, this shouldn't fail
+	_, err := rand.Read(randomness)
+	if err != nil {
+		return "", fmt.Errorf("Random number generation failed: %s", err)
+	}
+
+	// fill output
+	l := uint8(len(randChars))
+	for pos := 0; pos < randPostfixLen; pos++ {
+		random := uint8(randomness[pos])   // get random item
+		randomPos := random % uint8(l)     // random % length
+		output[pos] = randChars[randomPos] // put into output
+	}
+	return string(output), nil
+}
+
+// PushFileGCS uploads a file from the file system to Google Cloud Storage with given destination
+// name and expire duration. Returns expire filename or error, if happened any.
+func PushFileGCS(dstFilename, srcFilename string, expTime time.Duration) (string, error) {
 	f, err := os.Open(srcFilename)
 	if err != nil {
-		return fmt.Errorf("Failed to open file for pushing to Google Cloud Storage: %s", err)
+		return "", fmt.Errorf("Failed to open file for pushing to Google Cloud Storage: %s", err)
 	}
 	defer f.Close()
-	return writeGCS(dstFilename, f, expTime)
+
+	if err = WriteGCS(dstFilename, f); err != nil {
+		return "", fmt.Errorf("Failed to write object on Google Cloud Storage: %s", err)
+	}
+
+	if expTime > 0 {
+		return CreateExpireFile(dstFilename, expTime), nil
+	}
+	return "", nil
 }
 
-// pullPaths returns source and destination paths to pull a file from Google Cloud Storage.
+// CreateExpireFile creates an expire descriptor file to the Google Cloud Storage.
+func CreateExpireFile(dst string, expTime time.Duration) string {
+	if expTime < 1 {
+		return ""
+	}
+
+	randPostfix, err := randomString()
+	if err != nil {
+		// TODO: some logging would be nice here, to let the system know, that something is down
+		return "" // this is not a critical service
+	}
+	expFilename := strconv.FormatInt(time.Now().Add(expTime).Unix(), 10)
+	var b strings.Builder
+	expFilename = path.Join(utils.ExpirePrefix, expFilename)
+	b.WriteString(expFilename)
+	b.WriteByte('-')
+	b.WriteString(randPostfix)
+	expFilename = b.String()
+	if err = WriteGCS(expFilename, strings.NewReader(dst)); err != nil {
+		// TODO: some logging would be nice here, to let the system know, that something is down
+		return "" // this is not a critical service
+	}
+	return expFilename
+}
+
+// PullPaths returns source and destination paths to pull a file from Google Cloud Storage.
 // Source path becomes a category prefixed path to the GCS Bucket,
 // destination path becomes a relative path on the file system.
-func pullPaths(dstFilename, srcFilename string) (string, string) {
+func PullPaths(dstFilename, srcFilename string) (string, string) {
 	srcFilename = utils.ToRelative(srcFilename)
 	dstFilename = utils.PathFromSource(dstFilename, srcFilename)
 	srcFilename = utils.PrefixedPath(srcFilename)
 	return dstFilename, srcFilename
 }
 
-// pullGCS downloads a file or directory from the Google Cloud Storage to the file system
+// PullGCS downloads a file or directory from the Google Cloud Storage to the file system
 // with given destination and source path.
-func pullGCS(dst, src string, force bool) error {
+func PullGCS(dst, src string, force bool) error {
 	isFile, err := isFileSrc(src, true)
 	if err != nil {
 		return err
@@ -261,7 +332,7 @@ func pullGCS(dst, src string, force bool) error {
 	}
 
 	if isFile {
-		return pullFileGCS(dst, src)
+		return PullFileGCS(dst, src)
 	}
 
 	prefLen := len(src)
@@ -269,12 +340,12 @@ func pullGCS(dst, src string, force bool) error {
 		if err != nil {
 			return err
 		}
-		return pullFileGCS(path.Join(dst, filename[prefLen:]), filename)
+		return PullFileGCS(path.Join(dst, filename[prefLen:]), filename)
 	})
 }
 
-// pullFileGCS downloads a file from the Google Cloud Storage to the file system with given source path.
-func pullFileGCS(dstFilename, srcFilename string) error {
+// PullFileGCS downloads a file from the Google Cloud Storage to the file system with given source path.
+func PullFileGCS(dstFilename, srcFilename string) error {
 	err := os.MkdirAll(filepath.Dir(dstFilename), 0755)
 	if err != nil {
 		return fmt.Errorf("Failed to create result dir for pulling from Google Cloud Storage: %s", err)
@@ -284,21 +355,21 @@ func pullFileGCS(dstFilename, srcFilename string) error {
 		return fmt.Errorf("Failed to create result file for pulling from Google Cloud Storage: %s", err)
 	}
 	defer f.Close()
-	return readGCS(f, srcFilename)
+	return ReadGCS(f, srcFilename)
 }
 
-// yankPath returns path to yank a file from Google Cloud Storage.
+// YankPath returns path to yank a file from Google Cloud Storage.
 // Path becomes a category prefixed path to the GCS Bucket.
-func yankPath(filename string) string {
+func YankPath(filename string) string {
 	filename = utils.ToRelative(filename)
 	return utils.PrefixedPath(filename)
 }
 
-// yankGCS deletes a file or directory from the Google Cloud Storage.
-func yankGCS(name string) error {
+// YankGCS deletes a file or directory from the Google Cloud Storage.
+func YankGCS(name string) error {
 	isFile, err := isFileSrc(name, true)
 	if err != nil {
-		_, ok := err.(*ErrNotFound)
+		_, ok := err.(*internal.ErrNotFound)
 		if ok {
 			return nil
 		}
@@ -306,25 +377,24 @@ func yankGCS(name string) error {
 	}
 
 	if isFile {
-		return delGCS(name)
+		return DelGCS(name)
 	}
 
-	return delDirGCS(name)
+	return DelDirGCS(name)
 }
 
-// writeGCS uploads a file from an io Reader to Google Cloud Storage with given destination
-// path and name, and an expiration duration.
-func writeGCS(dstFilename string, srcReader io.Reader, expires time.Duration) error {
+// WriteGCS uploads a file from an io Reader to Google Cloud Storage with given destination
+// path and name.
+func WriteGCS(dstFilename string, srcReader io.Reader) error {
 	w := bucket.Object(dstFilename).NewWriter(ctx)
 	defer w.Close()
 	_, err := io.Copy(w, srcReader)
-	// TODO: set expire
 	return err
 }
 
-// readGCS downloads a file to an io Writer from Google Cloud Storage with given source
+// ReadGCS downloads a file to an io Writer from Google Cloud Storage with given source
 // path and name.
-func readGCS(dstWriter io.Writer, srcFilename string) error {
+func ReadGCS(dstWriter io.Writer, srcFilename string) error {
 	r, err := bucket.Object(srcFilename).NewReader(ctx)
 	if err != nil {
 		return err
@@ -333,17 +403,17 @@ func readGCS(dstWriter io.Writer, srcFilename string) error {
 	return err
 }
 
-// delDirGCS deletes a directory from the Google Cloud Storage with a given name.
-func delDirGCS(dir string) error {
+// DelDirGCS deletes a directory from the Google Cloud Storage with a given name.
+func DelDirGCS(dir string) error {
 	return walkGCS(dir, func(filename string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		return delGCS(filename)
+		return DelGCS(filename)
 	})
 }
 
-// delGCS deletes a file from the Google Cloud Storage with a given name.
-func delGCS(filename string) error {
+// DelGCS deletes a file from the Google Cloud Storage with a given name.
+func DelGCS(filename string) error {
 	return bucket.Object(filename).Delete(ctx)
 }
