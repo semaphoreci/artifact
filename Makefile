@@ -1,7 +1,12 @@
 .PHONY: build release
 
 REL_VERSION=$(shell git rev-parse HEAD)
-REL_BUCKET=artifact-cli-releases
+REL_BUCKET=artifacts-play-bucket
+
+install.goreleaser:
+	curl -L https://github.com/goreleaser/goreleaser/releases/download/v0.106.0/goreleaser_Linux_x86_64.tar.gz -o /tmp/goreleaser.tar.gz
+	tar -xf /tmp/goreleaser.tar.gz -C /tmp
+	sudo mv /tmp/goreleaser /usr/bin/goreleaser
 
 go.install:
 	cd /tmp
@@ -10,9 +15,9 @@ go.install:
 	sudo mv go /usr/local
 	cd -
 
-#gsutil.configure:
-#	gcloud auth activate-service-account deploy-from-semaphore@semaphore2-prod.iam.gserviceaccount.com --key-file ~/gce-creds.json
-#	gcloud config set project semaphore2-prod
+gsutil.configure:
+	gcloud auth activate-service-account gergely-play@artifacts-play.iam.gserviceaccount.com --key-file ~/sec/artifacts-play-84f9d6266402.json
+	gcloud config set project artifacts-play
 
 go.get:
 	go get
@@ -36,33 +41,7 @@ build:
 
 release:
 	$(MAKE) build OS=$(OS) ARCH=$(ARCH) -o artifact
-#	gsutil cp /tmp/artifact.tar.gz gs://$(REL_BUCKET)/$(REL_VERSION)-$(OS)-$(ARCH).tar.gz
-#	gsutil acl -R ch -u AllUsers:R gs://$(REL_BUCKET)/$(REL_VERSION)-$(OS)-$(ARCH).tar.gz
-#	gsutil setmeta -h "Cache-Control:private, max-age=0, no-transform" gs://$(REL_BUCKET)/$(REL_VERSION)-$(OS)-$(ARCH).tar.gz
-#	echo "https://storage.googleapis.com/$(REL_BUCKET)/$(REL_VERSION)-$(OS)-$(ARCH).tar.gz"
-
-release.all:
-	$(MAKE) release OS=linux   ARCH=386
-	$(MAKE) release OS=linux   ARCH=amd64
-	$(MAKE) release OS=darwin  ARCH=386
-	$(MAKE) release OS=darwin  ARCH=amd64
-	# $(MAKE) release OS=windows ARCH=386    # mousetrap issues?
-	# $(MAKE) release OS=windows ARCH=amd64
-
-release.stable:
-	$(MAKE) release.all REL_VERSION=stable
-
-release.edge:
-	$(MAKE) release.all REL_VERSION=edge
-
-release.stable.install.script:
-#	gsutil cp scripts/get gs://$(REL_BUCKET)/get.sh
-#	gsutil acl -R ch -u AllUsers:R gs://$(REL_BUCKET)/get.sh
-#	gsutil setmeta -h "Cache-Control:private, max-age=0, no-transform" gs://$(REL_BUCKET)/get.sh
-#	echo "https://storage.googleapis.com/$(REL_BUCKET)/get.sh"
-
-release.edge.install.script:
-#	gsutil cp scripts/get-edge gs://$(REL_BUCKET)/get-edge.sh
-#	gsutil acl -R ch -u AllUsers:R gs://$(REL_BUCKET)/get-edge.sh
-#	gsutil setmeta -h "Cache-Control:private, max-age=0, no-transform" gs://$(REL_BUCKET)/get-edge.sh
-#	echo "https://storage.googleapis.com/$(REL_BUCKET)/get-edge.sh"
+	gsutil cp /tmp/artifact.tar.gz gs://$(REL_BUCKET)/$(REL_VERSION)-$(OS)-$(ARCH).tar.gz
+	gsutil acl -R ch -u AllUsers:R gs://$(REL_BUCKET)/$(REL_VERSION)-$(OS)-$(ARCH).tar.gz
+	gsutil setmeta -h "Cache-Control:private, max-age=0, no-transform" gs://$(REL_BUCKET)/$(REL_VERSION)-$(OS)-$(ARCH).tar.gz
+	echo "https://storage.googleapis.com/$(REL_BUCKET)/$(REL_VERSION)-$(OS)-$(ARCH).tar.gz"
