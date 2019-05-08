@@ -121,7 +121,7 @@ Job level artifacts default expire time in the same format as [Alternative forms
 
 ## CLI
 
-## push
+### push
 
 #### `artifact push job x.zip`
 
@@ -191,7 +191,7 @@ File is stored into `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip`
 
 File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip`
 
-## pull
+### pull
 
 #### `artifact pull job x.zip`
 
@@ -232,7 +232,7 @@ File is stored into `/artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip` would b
 
 File is stored into `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip` would be restored at current directory as `x.zip`.
 
-## yank
+### yank
 
 #### `artifact yank`
 
@@ -248,7 +248,7 @@ Example for directory: `artifact yank job logs` deletes `/artifacts/jobs/<SEMAPH
 
 `artifact yank project x.zip` deletes `/artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip`
 
-## list
+### list
 TODO: this is not done yet
 
 #### `artifact list`
