@@ -13,7 +13,7 @@ blocks:
       env_vars:
         - name: GO111MODULE
           value: "on"
-        - name: BUCKET_NAME
+        - name: SEMAPHORE_ARTIFACT_BUCKET_NAME
           value: artifacts-play-bucket
         - name: GOOGLE_APPLICATION_CREDENTIALS
           value: /home/semaphore/sec/artifacts-play-84f9d6266402.json

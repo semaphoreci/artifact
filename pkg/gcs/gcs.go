@@ -51,7 +51,8 @@ func init() {
 		panic(fmt.Errorf("Failed to create Google Cloud Storage client: %s", err))
 	}
 
-	bucketName := os.Getenv("BUCKET_NAME")
+	bucketName := os.Getenv("SEMAPHORE_ARTIFACT_BUCKET_NAME")
+	fmt.Println("artifact inited with bucket name", bucketName)
 	bucket = client.Bucket(bucketName)
 }
 
