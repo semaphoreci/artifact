@@ -1,5 +1,5 @@
 version: v1.0
-name: First pipeline example
+name: Pipeline
 agent:
   machine:
     type: e1-standard-2
@@ -30,3 +30,11 @@ blocks:
           - make go.get
           - make build
           - make test
+
+promotions:
+  - name: "Release"
+    pipeline_file: "release.yml"
+    auto_promote_on:
+      - result: passed
+        branch:
+          - "^refs/tags/v*"
