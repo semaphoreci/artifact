@@ -15,8 +15,6 @@ blocks:
           value: "on"
         - name: SEMAPHORE_ARTIFACT_BUCKET_NAME
           value: artifacts-play-bucket
-        - name: GOOGLE_APPLICATION_CREDENTIALS
-          value: /home/semaphore/sec/artifacts-play-84f9d6266402.json
       jobs:
       - name: Unit tests
         commands:

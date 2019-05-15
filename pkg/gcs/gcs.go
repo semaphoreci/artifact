@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/semaphoreci/artifact/internal"
 	"github.com/semaphoreci/artifact/pkg/utils"
 	"google.golang.org/api/iterator"
@@ -20,6 +21,7 @@ import (
 )
 
 const (
+	googleCredFile = "~/.artifact/credentials.json"
 	randPostfixLen = 6
 	randChars      = "abcdefghijklmnopqrstuvwxyz0123456789"
 )
@@ -44,7 +46,11 @@ var (
 // init initializes Google Coud Storage with the given bucket name in environment variable.
 // Loads credentials from environment variable too.
 func init() {
-	credFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	h, err := homedir.Dir()
+	if err != nil {
+		panic(fmt.Errorf("Failed to find home directory: %s", err))
+	}
+	credFile := strings.Replace(googleCredFile, "~", h, 1)
 
 	client, err := storage.NewClient(ctx, option.WithCredentialsFile(credFile))
 	if err != nil {
