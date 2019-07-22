@@ -35,7 +35,7 @@ func runPullForCategory(cmd *cobra.Command, args []string, category, catID strin
 // PullJobCmd is the subcommand for "artifact pull job ..."
 var PullJobCmd = &cobra.Command{
 	Use:   "job [SOURCE PATH]",
-	Short: "Download a job file from the storage.",
+	Short: "Downloads a job file or directory from the storage.",
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 
@@ -43,14 +43,14 @@ var PullJobCmd = &cobra.Command{
 		catID, err := cmd.Flags().GetString("job-id")
 		errutil.Check(err)
 		dst, src := runPullForCategory(cmd, args, pathutil.JOB, catID)
-		errutil.Info("File '%s' pulled to '%s' for current job.\n", src, dst)
+		errutil.Info("'%s' pulled to '%s' for current job.\n", src, dst)
 	},
 }
 
 // PullWorkflowCmd is the subcommand for "artifact pull workflow ..."
 var PullWorkflowCmd = &cobra.Command{
 	Use:   "workflow [SOURCE PATH]",
-	Short: "Download a workflow file from the storage.",
+	Short: "Downloads a workflow file or directory from the storage.",
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 
@@ -58,20 +58,20 @@ var PullWorkflowCmd = &cobra.Command{
 		catID, err := cmd.Flags().GetString("workflow-id")
 		errutil.Check(err)
 		dst, src := runPullForCategory(cmd, args, pathutil.WORKFLOW, catID)
-		errutil.Info("File '%s' pulled to '%s' for current workflow.\n", src, dst)
+		errutil.Info("'%s' pulled to '%s' for current workflow.\n", src, dst)
 	},
 }
 
 // PullProjectCmd is the subcommand for "artifact pull project ..."
 var PullProjectCmd = &cobra.Command{
 	Use:   "project [SOURCE PATH]",
-	Short: "Download a project file from the storage.",
+	Short: "Downloads a project file or directory from the storage.",
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
 		dst, src := runPullForCategory(cmd, args, pathutil.PROJECT, "")
-		errutil.Info("File '%s' pulled to '%s' for current project.\n", src, dst)
+		errutil.Info("'%s' pulled to '%s' for current project.\n", src, dst)
 	},
 }
 

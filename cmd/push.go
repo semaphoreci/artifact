@@ -42,7 +42,7 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID,
 // PushJobCmd is the subcommand for "artifact push job ..."
 var PushJobCmd = &cobra.Command{
 	Use:   "job [SOURCE PATH]",
-	Short: "Upload a job file to the storage.",
+	Short: "Uploads a job file or directory to the storage.",
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 
@@ -51,14 +51,14 @@ var PushJobCmd = &cobra.Command{
 		errutil.Check(err)
 		dst, src := runPushForCategory(cmd, args, pathutil.JOB, catID,
 			viper.GetString("JobArtifactsExpire"))
-		errutil.Info("File '%s' pushed to '%s' for current job.\n", src, dst)
+		errutil.Info("'%s' pushed to '%s' for current job.\n", src, dst)
 	},
 }
 
 // PushWorkflowCmd is the subcommand for "artifact push workflow ..."
 var PushWorkflowCmd = &cobra.Command{
 	Use:   "workflow [SOURCE PATH]",
-	Short: "Upload a workflow file to the storage.",
+	Short: "Uploads a workflow or directory file to the storage.",
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 
@@ -67,21 +67,21 @@ var PushWorkflowCmd = &cobra.Command{
 		errutil.Check(err)
 		dst, src := runPushForCategory(cmd, args, pathutil.WORKFLOW, catID,
 			viper.GetString("WorkflowArtifactsExpire"))
-		errutil.Info("File '%s' pushed to '%s' for current workflow.\n", src, dst)
+		errutil.Info("'%s' pushed to '%s' for current workflow.\n", src, dst)
 	},
 }
 
 // PushProjectCmd is the subcommand for "artifact push project ..."
 var PushProjectCmd = &cobra.Command{
 	Use:   "project [SOURCE PATH]",
-	Short: "Upload a project file to the storage.",
+	Short: "Upload a project file or directory to the storage.",
 	Long:  ``,
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
 		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, "",
 			viper.GetString("ProjectArtifactsExpire"))
-		errutil.Info("File '%s' pushed to '%s' for current project.\n", src, dst)
+		errutil.Info("'%s' pushed to '%s' for current project.\n", src, dst)
 	},
 }
 
