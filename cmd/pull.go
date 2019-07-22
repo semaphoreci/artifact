@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/semaphoreci/artifact/internal"
 	"github.com/semaphoreci/artifact/pkg/gcs"
-	"github.com/semaphoreci/artifact/pkg/utils"
+	errutil "github.com/semaphoreci/artifact/pkg/util/err"
+	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
 	"github.com/spf13/cobra"
 )
 
@@ -19,18 +17,18 @@ to use them in a later phase, debug, or getting the results.`,
 }
 
 func runPullForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
-	utils.InitPathID(category, catID)
+	pathutil.InitPathID(category, catID)
 	src := args[0]
 
 	dst, err := cmd.Flags().GetString("destination")
-	internal.Check(err)
+	errutil.Check(err)
 
 	force, err := cmd.Flags().GetBool("force")
-	internal.Check(err)
+	errutil.Check(err)
 
 	dst, src = gcs.PullPaths(dst, src)
 	err = gcs.PullGCS(dst, src, force)
-	internal.Check(err)
+	errutil.Check(err)
 	return dst, src
 }
 
@@ -43,9 +41,9 @@ var PullJobCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("job-id")
-		internal.Check(err)
-		dst, src := runPullForCategory(cmd, args, utils.JOB, catID)
-		fmt.Printf("File '%s' pulled to '%s' for current job.\n", src, dst)
+		errutil.Check(err)
+		dst, src := runPullForCategory(cmd, args, pathutil.JOB, catID)
+		errutil.Info("File '%s' pulled to '%s' for current job.\n", src, dst)
 	},
 }
 
@@ -58,9 +56,9 @@ var PullWorkflowCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("workflow-id")
-		internal.Check(err)
-		dst, src := runPullForCategory(cmd, args, utils.WORKFLOW, catID)
-		fmt.Printf("File '%s' pulled to '%s' for current workflow.\n", src, dst)
+		errutil.Check(err)
+		dst, src := runPullForCategory(cmd, args, pathutil.WORKFLOW, catID)
+		errutil.Info("File '%s' pulled to '%s' for current workflow.\n", src, dst)
 	},
 }
 
@@ -72,8 +70,8 @@ var PullProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPullForCategory(cmd, args, utils.PROJECT, "")
-		fmt.Printf("File '%s' pulled to '%s' for current project.\n", src, dst)
+		dst, src := runPullForCategory(cmd, args, pathutil.PROJECT, "")
+		errutil.Info("File '%s' pulled to '%s' for current project.\n", src, dst)
 	},
 }
 

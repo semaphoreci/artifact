@@ -1,11 +1,9 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/semaphoreci/artifact/internal"
 	"github.com/semaphoreci/artifact/pkg/gcs"
-	"github.com/semaphoreci/artifact/pkg/utils"
+	errutil "github.com/semaphoreci/artifact/pkg/util/err"
+	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -20,24 +18,24 @@ while the rest of the semaphore process, or after it.`,
 
 func runPushForCategory(cmd *cobra.Command, args []string, category, catID,
 	expireDefault string) (string, string) {
-	utils.InitPathID(category, catID)
+	pathutil.InitPathID(category, catID)
 	src := args[0]
 
 	dst, err := cmd.Flags().GetString("destination")
-	internal.Check(err)
+	errutil.Check(err)
 
 	force, err := cmd.Flags().GetBool("force")
-	internal.Check(err)
+	errutil.Check(err)
 
 	expireIn, err := cmd.Flags().GetString("expire-in")
-	internal.Check(err)
+	errutil.Check(err)
 	if len(expireIn) == 0 {
 		expireIn = expireDefault
 	}
 
 	dst, src = gcs.PushPaths(dst, src)
-	_, err = gcs.PushGCS(dst, src, expireIn, force)
-	internal.Check(err)
+	err = gcs.PushGCS(dst, src, expireIn, force)
+	errutil.Check(err)
 	return dst, src
 }
 
@@ -50,10 +48,10 @@ var PushJobCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("job-id")
-		internal.Check(err)
-		dst, src := runPushForCategory(cmd, args, utils.JOB, catID,
+		errutil.Check(err)
+		dst, src := runPushForCategory(cmd, args, pathutil.JOB, catID,
 			viper.GetString("JobArtifactsExpire"))
-		fmt.Printf("File '%s' pushed to '%s' for current job.\n", src, dst)
+		errutil.Info("File '%s' pushed to '%s' for current job.\n", src, dst)
 	},
 }
 
@@ -66,10 +64,10 @@ var PushWorkflowCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("workflow-id")
-		internal.Check(err)
-		dst, src := runPushForCategory(cmd, args, utils.WORKFLOW, catID,
+		errutil.Check(err)
+		dst, src := runPushForCategory(cmd, args, pathutil.WORKFLOW, catID,
 			viper.GetString("WorkflowArtifactsExpire"))
-		fmt.Printf("File '%s' pushed to '%s' for current workflow.\n", src, dst)
+		errutil.Info("File '%s' pushed to '%s' for current workflow.\n", src, dst)
 	},
 }
 
@@ -81,9 +79,9 @@ var PushProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPushForCategory(cmd, args, utils.PROJECT, "",
+		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, "",
 			viper.GetString("ProjectArtifactsExpire"))
-		fmt.Printf("File '%s' pushed to '%s' for current project.\n", src, dst)
+		errutil.Info("File '%s' pushed to '%s' for current project.\n", src, dst)
 	},
 }
 
@@ -104,8 +102,6 @@ func init() {
 	PushProjectCmd.Flags().BoolP("force", "f", false, desc)
 
 	desc = `Removes the files after the given amount of time.
-just integer (number of seconds)
-Nh for N hours
 Nd for N days
 Nw for N weeks
 Nm for N months

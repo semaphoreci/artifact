@@ -1,4 +1,4 @@
-package utils
+package pathutil
 
 import (
 	"os"
@@ -14,7 +14,7 @@ const (
 	// JOB represents job in command line arguments for push, pull and yank commands.
 	JOB = "job"
 	// ExpirePrefix is where object expires are stored in the same bucket.
-	ExpirePrefix = "/var/expires-in/"
+	ExpirePrefix = "var/expires-in/"
 )
 
 var (
@@ -45,17 +45,17 @@ func InitPathID(category, defVal string) {
 }
 
 // PrefixedPath returns paths for Google Cloud Storage.
-// For project files, it returns like: /artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip
-// For workflow files, it returns like: /artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip
-// For job files, it returns like: /artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip
+// For project files, it returns like: artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip
+// For workflow files, it returns like: artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip
+// For job files, it returns like: artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip
 func PrefixedPath(filepath string) string {
-	return path.Join("/artifacts", pluralName, categoryID, filepath)
+	return path.Join("artifacts", pluralName, categoryID, filepath)
 }
 
 // PrefixedPathFromSource returns a path for Google Cloud Storage, where destination filename can be
 // empty. In this case filename is gained from source filename, eg. uploading /from/this/path/x.zip
-// with empty --destination to the project will return /artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip,
-// but with --destination=y.zip will result in /artifacts/projects/<SEMAPHORE_PROJECT_ID>/y.zip .
+// with empty --destination to the project will return artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip,
+// but with --destination=y.zip will result in artifacts/projects/<SEMAPHORE_PROJECT_ID>/y.zip .
 func PrefixedPathFromSource(dstFilepath, srcFilepath string) string {
 	dstFilepath = PathFromSource(dstFilepath, srcFilepath)
 	return PrefixedPath(dstFilepath)
