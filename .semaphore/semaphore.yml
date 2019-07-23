@@ -1,5 +1,5 @@
 version: v1.0
-name: First pipeline example
+name: Pipeline
 agent:
   machine:
     type: e1-standard-2
@@ -13,7 +13,7 @@ blocks:
       env_vars:
         - name: GO111MODULE
           value: "on"
-        - name: BUCKET_NAME
+        - name: SEMAPHORE_ARTIFACT_BUCKET_NAME
           value: artifacts-play-bucket
         - name: GOOGLE_APPLICATION_CREDENTIALS
           value: /home/semaphore/sec/artifacts-play-84f9d6266402.json
@@ -30,3 +30,11 @@ blocks:
           - make go.get
           - make build
           - make test
+
+promotions:
+  - name: "Release"
+    pipeline_file: "release.yml"
+    auto_promote_on:
+      - result: passed
+        branch:
+          - "^refs/tags/v*"
