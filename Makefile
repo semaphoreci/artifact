@@ -8,7 +8,7 @@ go.install:
 	cd -
 
 go.get:
-	go get
+	go get ./...
 
 go.fmt:
 	go fmt ./...

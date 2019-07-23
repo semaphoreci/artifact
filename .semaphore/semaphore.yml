@@ -10,6 +10,13 @@ blocks:
       env_vars:
         - name: GO111MODULE
           value: "on"
+<<<<<<< HEAD
+=======
+        - name: SEMAPHORE_ARTIFACT_BUCKET_NAME
+          value: artifacts-play-bucket
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /home/semaphore/sec/artifacts-play-84f9d6266402.json
+>>>>>>> master
       jobs:
       - name: Unit tests
         commands:
