@@ -22,13 +22,6 @@ go.fmt:
 
 test:
 	SEMAPHORE_ARTIFACT_TOKEN=localhost:8080 SEMAPHORE_PROJECT_ID=some_project SEMAPHORE_WORKFLOW_ID=some_workflow SEMAPHORE_JOB_ID=some_job go test -v ./...
-	# make sure to wipe everything before the test
-	go run main.go yank job .
-	go run main.go push job -d myTest/myReadme README.md
-	go run main.go pull job -d readme2 myTest/myReadme
-	go run main.go yank job myTest/myReadme
-	diff README.md readme2
-	rm readme2
 
 build:
 	env GOOS=$(OS) GOARCH=$(ARCH) go build -o artifact
