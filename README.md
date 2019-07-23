@@ -21,6 +21,7 @@
 
 * For local testing, add the Google Cloud Storage credential file to ../artifacts-play-84f9d6266402.json relative to this directory.
 * Before committing anything, symlink pre-commit script with `ln -s ../../script/pre-commit .git/hooks/`
+* Set ARTIFACTHUB_LOGLEVEL to one of the following values: `DEBUG`, `INFO`, `WARN`, `ERROR`; the deafult is `DEBUG`.
 
 ## Concepts
 

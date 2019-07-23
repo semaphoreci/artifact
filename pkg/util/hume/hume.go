@@ -1,4 +1,4 @@
-package utils
+package humeutil
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	errutil "github.com/semaphoreci/artifact/pkg/util/err"
 )
 
 // ParseRelativeAgeForHumans converts a human readable time duration to a machine readable one.
@@ -24,7 +26,8 @@ func ParseRelativeAgeForHumans(descriptor string) (time.Duration, error) {
 
 	num, err := strconv.Atoi(descriptor[:descLen-1])
 	if err != nil {
-		return 0, fmt.Errorf("Failed to parse time for humans: %s, error: %s", descriptor, err)
+		return 0, errutil.Error("parsing time",
+			fmt.Errorf("time to parse: %s, error: %s", descriptor, err))
 	}
 	numDur := time.Duration(num) * time.Hour * 24
 	lastByte := descriptor[descLen-1]
@@ -41,5 +44,5 @@ func ParseRelativeAgeForHumans(descriptor string) (time.Duration, error) {
 	if lastRune == 'y' {
 		return numDur * 365, nil
 	}
-	return 0, fmt.Errorf("Failed to parse time for humans: %s, error: %s", descriptor, err)
+	return 0, errutil.Error("parsing time", fmt.Errorf("time to parse: %s", descriptor))
 }

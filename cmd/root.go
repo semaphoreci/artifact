@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	homedir "github.com/mitchellh/go-homedir"
+	errutil "github.com/semaphoreci/artifact/pkg/util/err"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -21,10 +19,8 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	err := rootCmd.Execute()
+	errutil.Check(err)
 }
 
 func init() {
@@ -48,10 +44,7 @@ func initConfig() {
 	} else {
 		// Find home directory.
 		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		errutil.Check(err)
 
 		// Search config in home directory with name ".artifact" (without extension).
 		viper.AddConfigPath(home)
@@ -62,6 +55,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		errutil.Debug("Using config file: %s", viper.ConfigFileUsed())
 	}
 }
