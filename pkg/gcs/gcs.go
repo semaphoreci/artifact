@@ -149,7 +149,7 @@ func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) error {
 	if err != nil {
 		return errutil.Error("failed to create request", err)
 	}
-	q.Header.Set("authentication", token)
+	q.Header.Set("authorization", token)
 	r, err := client.Do(q)
 	if err != nil {
 		return errutil.Error("failed to do request", err)
