@@ -227,8 +227,10 @@ func UploadFile(u, filename string) error {
 func PushPaths(dst, src string) (string, string) {
 	newDst := pathutil.ToRelative(dst)
 	newDst = pathutil.PrefixedPathFromSource(newDst, src)
-	errutil.Debug("PushPaths input dst: '%s', src: '%s', output dst: '%s'", dst, src, newDst)
-	return newDst, src
+	newSrc := path.Clean(src)
+	errutil.Debug("PushPaths input dst: '%s', src: '%s', output dst: '%s', src: '%s'", dst, src,
+		newDst, newSrc)
+	return newDst, newSrc
 }
 
 // PushGCS uploads a file or directory from the file system to Google Cloud Storage to given destination
@@ -324,6 +326,7 @@ func PullPaths(dst, src string) (string, string) {
 	newSrc := pathutil.ToRelative(src)
 	newDst := pathutil.PathFromSource(dst, newSrc)
 	newSrc = pathutil.PrefixedPath(newSrc)
+	newDst = path.Clean(newDst)
 	errutil.Debug("PullPaths input dst: '%s', src: '%s', output dst: '%s', src: '%s'", dst, src,
 		newDst, newSrc)
 	return newDst, newSrc
