@@ -12,7 +12,7 @@ var cfgFile string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "artifact",
-	Short: "Helps the semaphore to store files through the process",
+	Short: "Semaphore 2.0 Artifact CLI",
 	Long:  "",
 }
 
