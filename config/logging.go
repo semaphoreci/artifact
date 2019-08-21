@@ -31,7 +31,7 @@ func init() {
 		"INFO":  LogLvlInfo,
 		"WARN":  LogLvlWarn,
 		"ERROR": LogLvlError,
-		"":      LogLvlInfo, // the default level is debug
+		"":      LogLvlError, // the default level is error
 	}
 	var ok bool
 	if LogLevel, ok = logLvlStrToVal[os.Getenv("ARTIFACT_LOGLEVEL")]; !ok {
