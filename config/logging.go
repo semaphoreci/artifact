@@ -7,6 +7,7 @@ import (
 )
 
 // LogLevel is the global logging level for the application.
+
 var LogLevel LogLevels
 
 // LogLevels contains available logging levels.
@@ -30,7 +31,7 @@ func init() {
 		"INFO":  LogLvlInfo,
 		"WARN":  LogLvlWarn,
 		"ERROR": LogLvlError,
-		"":      LogLvlDebug, // the default level is debug
+		"":      LogLvlInfo, // the default level is debug
 	}
 	var ok bool
 	if LogLevel, ok = logLvlStrToVal[os.Getenv("ARTIFACT_LOGLEVEL")]; !ok {
