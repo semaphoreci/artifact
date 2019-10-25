@@ -167,6 +167,27 @@ func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) error {
 	return nil
 }
 
+func retryableHTTPReq(data interface{}, target *GenerateSignedURLsResponse) error {
+	retries := 0
+	maxRetries := 3
+
+	for {
+		err := handleHTTPReq(data, target)
+		if err == nil {
+			return nil
+		}
+		retries++
+		if retries <= maxRetries {
+			errutil.Info("Failed to perform request, retrying in 3 sec (%d out of %d).", retries, maxRetries)
+			time.Sleep(3 * time.Second)
+			continue
+		} else {
+			errutil.Info("Give up after %d retries.", maxRetries)
+			return err
+		}
+	}
+}
+
 func randomString() (string, error) {
 	output := make([]byte, randPostfixLen)
 	randomness := make([]byte, randPostfixLen)
@@ -283,7 +304,7 @@ func PushGCS(dst, src, expires string, force bool) error {
 		request.Type = generateSignedURLsRequestPUSH
 	}
 	var t GenerateSignedURLsResponse
-	if err = handleHTTPReq(request, &t); err != nil {
+	if err = retryableHTTPReq(request, &t); err != nil {
 		return err
 	}
 	us := t.Urls
@@ -339,7 +360,7 @@ func PullGCS(dst, src string, force bool) error {
 	ps := []string{src}
 	var t GenerateSignedURLsResponse
 	request := &GenerateSignedURLsRequest{Paths: ps, Type: generateSignedURLsRequestPULL}
-	err := handleHTTPReq(request, &t)
+	err := retryableHTTPReq(request, &t)
 	if err != nil {
 		return err
 	}
@@ -395,7 +416,7 @@ func YankGCS(name string) error {
 	ps := []string{name}
 	var t GenerateSignedURLsResponse
 	request := &GenerateSignedURLsRequest{Paths: ps, Type: generateSignedURLsRequestYANK}
-	err := handleHTTPReq(request, &t)
+	err := retryableHTTPReq(request, &t)
 	if err != nil {
 		return err
 	}
