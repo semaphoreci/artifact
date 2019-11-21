@@ -7,12 +7,14 @@ builds:
   - CGO_ENABLED=0
   goos:
     - linux
+    - darwin
   goarch:
     - amd64
 archive:
   name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
   replacements:
     linux: Linux
+    darwin: Darwin
     amd64: x86_64
 checksum:
   name_template: '{{ .ProjectName }}_checksums.txt'
