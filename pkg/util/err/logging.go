@@ -1,53 +1,67 @@
 package errutil
 
 import (
+	"context"
 	"fmt"
-	"log"
+	"os"
+	"strings"
 
 	"github.com/semaphoreci/artifact/config"
+	"go.uber.org/zap"
 )
 
-var (
-	// Debug is the logger function for the debug level.
-	Debug func(string, ...interface{})
-	// Info is the logger function for the info level.
-	Info func(string, ...interface{})
-	// Warn is the logger function for the warning level.
-	Warn func(string, error) error
-	// Error is the logger function for the error level.
-	Error func(string, error) error
+// L is the global logger.
+var L Logger
+
+type key int
+
+const (
+	logKey key = iota
 )
 
 func init() {
-	logLvl := config.LogLevel
-	Error = logStatus
-	Warn = noopStatus
-	Info = noop
-	Debug = noop
-	if logLvl < config.LogLvlError {
-		Warn = logStatus
-		if logLvl < config.LogLvlWarn {
-			Info = logStr
-			if logLvl < config.LogLvlInfo {
-				Debug = logStr
-			}
+	if strings.HasSuffix(os.Args[0], ".test") { // testing
+		L = Logger{zap.NewNop()}
+	} else {
+		var err error
+		var l *zap.Logger
+		if config.LogLevel > config.LogLvlDebug {
+			l, err = zap.NewProduction()
+		} else {
+			l, err = zap.NewDevelopment()
 		}
+		if err != nil {
+			panic(fmt.Errorf("failed to initialize logger: %s", err.Error()))
+		}
+		L = Logger{l}
 	}
 }
 
-func noop(string, ...interface{}) {}
-
-func logStr(msg string, args ...interface{}) {
-	log.Printf(msg, args...)
+// Logger is a wrapper for zap logger that may have custom functions on it.
+type Logger struct {
+	*zap.Logger
 }
 
-func noopStatus(msg string, err error) error {
-	return nil
+// CreateContext returns a new logger with the given fields tagged to the logger, and the
+// context containing this logger.
+func CreateContext(ctx context.Context, fields ...zap.Field) (context.Context, *zap.Logger) {
+	l := L.With(fields...)
+	return context.WithValue(ctx, logKey, l), l
 }
 
-// logStatus creates a new error with grpc status code, logs and returns it.
-func logStatus(msg string, err error) error {
-	err = fmt.Errorf("%s: %v", msg, err)
-	log.Println(err)
-	return err
+// CreateContextNop adds a noop logger to the context.
+func CreateContextNop(ctx context.Context, fields ...zap.Field) context.Context {
+	return context.WithValue(ctx, logKey, Logger{zap.NewNop()})
+}
+
+// WithContext returns a logger related to the given context.
+func WithContext(ctx context.Context) Logger {
+	if ctx == nil {
+		return L
+	}
+
+	if ctxLogger, ok := ctx.Value(logKey).(Logger); ok {
+		return ctxLogger
+	}
+	return L
 }

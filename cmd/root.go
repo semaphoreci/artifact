@@ -5,6 +5,7 @@ import (
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 var cfgFile string
@@ -55,6 +56,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		errutil.Debug("Using config file: %s", viper.ConfigFileUsed())
+		errutil.L.Debug("Using config file", zap.String("filename", viper.ConfigFileUsed()))
 	}
 }
