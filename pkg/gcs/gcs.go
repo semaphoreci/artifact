@@ -140,6 +140,7 @@ type GenerateSignedURLsResponse struct {
 	Error string       `json:"error,omitempty"`
 }
 
+// handleHTTPReq calls a signed url, and returns response in arg pointer.
 func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) (fail bool) {
 	var b bytes.Buffer
 	fail = true
@@ -151,25 +152,31 @@ func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) (fail b
 	}
 	q, err := http.NewRequest(http.MethodPost, gatewayAPI, &b)
 	if err != nil {
-		errutil.L.Error("failed to create http request", zap.Error(err))
+		errutil.L.Error("failed to create signed URL http request", zap.Error(err))
 		return
 	}
 	q.Header.Set("authorization", token)
 	r, err := client.Do(q)
 	if err != nil {
-		errutil.L.Error("failed to do request", zap.Error(err))
+		errutil.L.Error("failed to do signed URL http request", zap.Error(err))
 		return
 	}
 	defer r.Body.Close()
+	if fail = httputil.CheckStatus(r.StatusCode); fail {
+		errutil.L.Error("http do signed URL request status is an error",
+			zap.Int("status code", r.StatusCode),
+			zap.String("status", http.StatusText(r.StatusCode)))
+		return
+	}
 	b.Reset()
 	tee := io.TeeReader(r.Body, &b)
 	if err = json.NewDecoder(tee).Decode(target); err != nil {
-		errutil.L.Error("failed to decode http response", zap.Error(err),
+		errutil.L.Error("failed to decode signed URL http response", zap.Error(err),
 			zap.String("content", b.String()))
 		return
 	}
 	if len(target.Error) > 0 {
-		errutil.L.Error("Error http result", zap.String("error", target.Error))
+		errutil.L.Error("Error signed URL http result", zap.String("error", target.Error))
 		return
 	}
 	return false

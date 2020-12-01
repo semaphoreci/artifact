@@ -27,11 +27,11 @@ var (
 
 func TestRetryHTTPReqSuccess(t *testing.T) {
 	httpmock.Activate()
-	numOfTries := 0
+	numOfTries := 1
 	defer httpmock.DeactivateAndReset()
 	httpmock.RegisterResponder("POST", reqURL,
 		func(req *http.Request) (*http.Response, error) {
-			if numOfTries < 3 {
+			if numOfTries < errutil.RetryLimit {
 				numOfTries++
 				return httpmock.NewStringResponse(500, ""), nil
 			}
@@ -46,7 +46,7 @@ func TestRetryHTTPReqSuccess(t *testing.T) {
 	request := &GenerateSignedURLsRequest{Paths: []string{"/test/path"}}
 	request.Type = generateSignedURLsRequestPUSH
 	var x GenerateSignedURLsResponse
-	if fail := errutil.RetryOnFailure("", func() bool {
+	if fail := errutil.RetryOnFailure("get mock result", func() bool {
 		return handleHTTPReq(request, &x)
 	}); fail == true {
 		t.Errorf("Failed to preform request")
@@ -65,7 +65,7 @@ func TestRetryableHTTPReqFailure(t *testing.T) {
 	request := &GenerateSignedURLsRequest{Paths: []string{"/test/path"}}
 	request.Type = generateSignedURLsRequestPUSH
 	var x GenerateSignedURLsResponse
-	if fail := errutil.RetryOnFailure("", func() bool {
+	if fail := errutil.RetryOnFailure("get mock result", func() bool {
 		return handleHTTPReq(request, &x)
 	}); fail == false {
 		t.Errorf("Result must be Failure")

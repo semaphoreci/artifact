@@ -20,7 +20,7 @@ const (
 )
 
 func init() {
-	if strings.HasSuffix(os.Args[0], ".test") { // testing
+	if strings.HasSuffix(os.Args[0], ".test") { // disable logging for testing
 		L = Logger{zap.NewNop()}
 	} else {
 		var err error

@@ -19,7 +19,7 @@
 
 ## Init
 
-* For local testing, add the Google Cloud Storage credential file to ../artifacts-play-84f9d6266402.json relative to this directory.
+* Logging is disabled for testing. If some tests are failing and you can't find the reason why, you can re-enable it in the `func init` in the [logging file source](pkg/util/err/logging.go).
 * Before committing anything, symlink pre-commit script with `ln -s ../../script/pre-commit .git/hooks/`
 * Set ARTIFACT_LOGLEVEL to one of the following values: `DEBUG`, `INFO`, `WARN`, `ERROR`; the deafult is `DEBUG`.
 
