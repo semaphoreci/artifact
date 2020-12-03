@@ -8,13 +8,19 @@ import (
 	"go.uber.org/zap"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	verbose bool
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "artifact",
 	Short: "Semaphore 2.0 Artifact CLI",
 	Long:  "",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		errutil.Init(verbose)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -31,6 +37,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.artifact.yaml)")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose logging")
 }
 
 // initConfig reads in config file and ENV variables if set.

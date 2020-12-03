@@ -3,43 +3,74 @@ package errutil
 import (
 	"context"
 	"fmt"
-	"os"
-	"strings"
+	"log"
 
-	"github.com/semaphoreci/artifact/config"
 	"go.uber.org/zap"
 )
 
-// L is the global logger.
-var L Logger
+var (
+	verbose bool
+	// L is the global logger.
+	L = Logger{zap.NewNop()}
+)
 
 type key int
 
 const (
-	logKey key = iota
+	logKey  key = iota
+	logFile     = "/tmp/artifacts.log"
 )
 
-func init() {
-	if strings.HasSuffix(os.Args[0], ".test") { // disable logging for testing
-		L = Logger{zap.NewNop()}
+// Init initializes logging, based on we want verbose, or simple logs. Nonverbose logs go to a
+// temporary file only, and the user get a nice message about everything from Info to Error.
+func Init(v bool) {
+	verbose = v
+	var c zap.Config
+	if v {
+		c = zap.NewDevelopmentConfig()
+		c.OutputPaths = []string{"stderr", logFile}
+		c.ErrorOutputPaths = []string{"stderr", logFile}
 	} else {
-		var err error
-		var l *zap.Logger
-		if config.LogLevel > config.LogLvlDebug {
-			l, err = zap.NewProduction()
-		} else {
-			l, err = zap.NewDevelopment()
-		}
-		if err != nil {
-			panic(fmt.Errorf("failed to initialize logger: %s", err.Error()))
-		}
-		L = Logger{l}
+		c = zap.NewProductionConfig()
+		c.OutputPaths = []string{logFile}
+		c.ErrorOutputPaths = []string{logFile}
 	}
+	l, err := c.Build()
+	if err != nil {
+		panic(fmt.Errorf("failed to initialize logger: %s", err.Error()))
+	}
+	L = Logger{l}
 }
 
 // Logger is a wrapper for zap logger that may have custom functions on it.
 type Logger struct {
 	*zap.Logger
+}
+
+// Error wraps printing a nice message to the user, and logging the error to the zap logger.
+func (l Logger) Error(msg string, fields ...zap.Field) {
+	log.Println(msg)
+	l.Logger.Error(msg, fields...)
+}
+
+// Warn wraps printing a nice message to the user, and logging the warning to the zap logger.
+func (l Logger) Warn(msg string, fields ...zap.Field) {
+	log.Println(msg)
+	l.Logger.Warn(msg, fields...)
+}
+
+// Info wraps printing a nice message to the user, and logging the information to the zap logger.
+func (l Logger) Info(msg string, fields ...zap.Field) {
+	log.Println(msg)
+	l.Logger.Info(msg, fields...)
+}
+
+// Debug wraps printing a nice message to the user, and logging the debug to the zap logger.
+func (l Logger) Debug(msg string, fields ...zap.Field) {
+	if verbose {
+		log.Println(msg)
+		l.Logger.Debug(msg, fields...)
+	}
 }
 
 // CreateContext returns a new logger with the given fields tagged to the logger, and the
