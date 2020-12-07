@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/semaphoreci/artifact/pkg/util/log"
 	"go.uber.org/zap"
 )
 
@@ -18,20 +19,20 @@ const ( // TODO: these constants may be moved to conf or console arg
 
 // RetryOnFailure calls the given function for a certain (RetryLimit) number of times. The
 // function should be an inline function, so it can set return values. The function returns an
-// error. The retries stop, if the error is nil. After the certain number of times expired, it
-// returns the error anyway.
-func RetryOnFailure(msg string, toRun func() bool) (fail bool) {
+// error. The retries stop, if the result is ok. After the certain number of times expired, it
+// logs the error anyway.
+func RetryOnFailure(msg string, toRun func() bool) (ok bool) {
 	timeout := startTimeout
 	for i := 0; i < RetryLimit; i++ {
-		if fail = toRun(); !fail {
+		if ok = toRun(); ok {
 			return
 		}
 		if i == 0 {
-			L.Warn(fmt.Sprintf("Failed to %s, retrying...", msg), zap.Int("max retries", RetryLimit))
+			log.Warn(fmt.Sprintf("Failed to %s, retrying...", msg), zap.Int("max retries", RetryLimit))
 		}
 		time.Sleep(timeout * time.Millisecond)
 		timeout += addTimeout
 	}
-	L.Error("Repeatedly failed to "+msg, zap.Int("retry number", RetryLimit))
+	log.Error("Repeatedly failed to "+msg, zap.Int("retry number", RetryLimit))
 	return
 }

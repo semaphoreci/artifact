@@ -1,6 +1,7 @@
 package errutil
 
 import (
+	"github.com/semaphoreci/artifact/pkg/util/log"
 	"go.uber.org/zap"
 )
 
@@ -26,13 +27,13 @@ var lfsMap = map[Location]string{
 
 // ErrAlreadyExists is called in case of a file conflict.
 func ErrAlreadyExists(description, filename string, location Location) {
-	L.Error("The file already exists; delete it first, or use --force flag",
+	log.Error("The file already exists; delete it first, or use --force flag",
 		zap.String("name", filename), zap.String("while", description),
 		zap.String("location", lfsMap[location]))
 }
 
 // ErrNotFound is called when a source copied from doesn't exists.
 func ErrNotFound(filename string, location Location) {
-	L.Error("The file or directory doesn't exists", zap.String("name", filename),
+	log.Error("The file or directory doesn't exists", zap.String("name", filename),
 		zap.String("location", lfsMap[location]))
 }

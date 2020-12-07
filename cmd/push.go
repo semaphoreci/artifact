@@ -5,6 +5,7 @@ import (
 
 	"github.com/semaphoreci/artifact/pkg/gcs"
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
+	"github.com/semaphoreci/artifact/pkg/util/log"
 	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -37,7 +38,7 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID,
 	}
 
 	dst, src = gcs.PushPaths(dst, src)
-	if fail := gcs.PushGCS(dst, src, expireIn, force); fail {
+	if ok := gcs.PushGCS(dst, src, expireIn, force); !ok {
 		os.Exit(1) // error already logged
 	}
 	return dst, src
@@ -55,7 +56,7 @@ var PushJobCmd = &cobra.Command{
 		errutil.Check(err)
 		dst, src := runPushForCategory(cmd, args, pathutil.JOB, catID,
 			viper.GetString("JobArtifactsExpire"))
-		errutil.L.Info("successful push for current job", zap.String("source", src),
+		log.Info("successful push for current job", zap.String("source", src),
 			zap.String("destination", dst))
 	},
 }
@@ -72,7 +73,7 @@ var PushWorkflowCmd = &cobra.Command{
 		errutil.Check(err)
 		dst, src := runPushForCategory(cmd, args, pathutil.WORKFLOW, catID,
 			viper.GetString("WorkflowArtifactsExpire"))
-		errutil.L.Info("successful push for current workflow", zap.String("source", src),
+		log.Info("successful push for current workflow", zap.String("source", src),
 			zap.String("destination", dst))
 	},
 }
@@ -87,7 +88,7 @@ var PushProjectCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, "",
 			viper.GetString("ProjectArtifactsExpire"))
-		errutil.L.Info("successful push for current project", zap.String("source", src),
+		log.Info("successful push for current project", zap.String("source", src),
 			zap.String("destination", dst))
 	},
 }

@@ -46,9 +46,10 @@ func TestRetryHTTPReqSuccess(t *testing.T) {
 	request := &GenerateSignedURLsRequest{Paths: []string{"/test/path"}}
 	request.Type = generateSignedURLsRequestPUSH
 	var x GenerateSignedURLsResponse
-	if fail := errutil.RetryOnFailure("get mock result", func() bool {
+	ok := errutil.RetryOnFailure("get mock result", func() bool {
 		return handleHTTPReq(request, &x)
-	}); fail == true {
+	})
+	if !ok {
 		t.Errorf("Failed to preform request")
 	}
 }
@@ -65,9 +66,10 @@ func TestRetryableHTTPReqFailure(t *testing.T) {
 	request := &GenerateSignedURLsRequest{Paths: []string{"/test/path"}}
 	request.Type = generateSignedURLsRequestPUSH
 	var x GenerateSignedURLsResponse
-	if fail := errutil.RetryOnFailure("get mock result", func() bool {
+	ok := errutil.RetryOnFailure("get mock result", func() bool {
 		return handleHTTPReq(request, &x)
-	}); fail == false {
+	})
+	if ok {
 		t.Errorf("Result must be Failure")
 	}
 }

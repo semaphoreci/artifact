@@ -6,9 +6,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/semaphoreci/artifact/pkg/util/log"
 	"go.uber.org/zap"
-
-	errutil "github.com/semaphoreci/artifact/pkg/util/err"
 )
 
 // ParseRelativeAgeForHumans converts a human readable time duration to a machine readable one.
@@ -28,7 +27,7 @@ func ParseRelativeAgeForHumans(descriptor string) time.Duration {
 
 	num, err := strconv.Atoi(descriptor[:descLen-1])
 	if err != nil {
-		errutil.L.Error("parsing time failed", zap.String("time to parse", descriptor),
+		log.Error("parsing time failed", zap.String("time to parse", descriptor),
 			zap.Error(err))
 		return 0
 	}
@@ -47,6 +46,6 @@ func ParseRelativeAgeForHumans(descriptor string) time.Duration {
 	if lastRune == 'y' {
 		return numDur * 365
 	}
-	errutil.L.Error("parsing time failed", zap.String("time to parse", descriptor))
+	log.Error("parsing time failed", zap.String("time to parse", descriptor))
 	return 0
 }

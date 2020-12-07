@@ -2,7 +2,6 @@ package gcs
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"math/rand"
@@ -19,6 +18,7 @@ import (
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
 	httputil "github.com/semaphoreci/artifact/pkg/util/http"
 	humeutil "github.com/semaphoreci/artifact/pkg/util/hume"
+	"github.com/semaphoreci/artifact/pkg/util/log"
 	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
 	"go.uber.org/zap"
 )
@@ -30,7 +30,6 @@ const (
 )
 
 var (
-	ctx        = context.Background()
 	token      string
 	client     = http.Client{}
 	gatewayAPI string
@@ -40,64 +39,64 @@ var (
 // Loads credentials from environment variable too.
 func init() {
 	token = os.Getenv("SEMAPHORE_ARTIFACT_TOKEN")
-	errutil.L.Debug("initiating artifact...", zap.String("token", token))
+	log.Debug("initiating artifact...", zap.String("token", token))
 	orgURL := os.Getenv("SEMAPHORE_ORGANIZATION_URL")
 	u, err := url.Parse(orgURL)
 	if err != nil {
-		errutil.L.Panic("failed to parse", zap.String("org URL", orgURL), zap.Error(err))
+		log.Panic("failed to parse", zap.String("org URL", orgURL), zap.Error(err))
 	}
 	u.Path = gatewayAPIBase
 	gatewayAPI = u.String()
-	errutil.L.Debug("artifact initiated", zap.String("org URL", orgURL),
+	log.Debug("artifact initiated", zap.String("org URL", orgURL),
 		zap.String("gatewayAPIBase", gatewayAPIBase), zap.String("gatewayAPI", gatewayAPI))
 }
 
 // isFile returns if the given path points to a file in the local file system.
-func isFile(filename string) (isF bool, fail bool) {
+func isFile(filename string) (isF bool, ok bool) {
 	fi, err := os.Stat(filename)
 	if err == nil {
-		return !fi.IsDir(), false
+		return !fi.IsDir(), true
 	}
 	if os.IsNotExist(err) {
-		return false, false
+		return false, true
 	}
-	errutil.L.Error("looking for a file failed", zap.Error(err))
-	return false, true
+	log.Error("looking for a file failed", zap.Error(err))
+	return
 }
 
 // isDir returns if the given path points to a directory in the local file system.
-func isDir(filename string) (isD bool, fail bool) {
+func isDir(filename string) (isD bool, ok bool) {
 	fi, err := os.Stat(filename)
 	if err == nil {
-		return fi.IsDir(), false
+		return fi.IsDir(), true
 	}
 	if os.IsNotExist(err) {
-		return false, false
+		return false, true
 	}
-	errutil.L.Error("looking for a directory failed", zap.Error(err))
-	return false, true
+	log.Error("looking for a directory failed", zap.Error(err))
+	return
 }
 
 // isFileSrc checks, if the given source exists, and if it's a file.
-func isFileSrc(src string) (isF bool, fail bool) {
-	if isF, fail = isFile(src); fail {
+func isFileSrc(src string) (isF bool, ok bool) {
+	if isF, ok = isFile(src); !ok {
 		return
 	}
 	if isF {
-		errutil.L.Debug("the source seems to be a file", zap.String("source", src))
+		log.Debug("the source seems to be a file", zap.String("source", src))
 		return
 	}
 	var isD bool
-	if isD, fail = isDir(src); fail {
-		return false, true
+	if isD, ok = isDir(src); !ok {
+		return
 	}
 	if isD {
-		errutil.L.Debug("the source seems to be a directory", zap.String("source", src))
-		return false, false
+		log.Debug("the source seems to be a directory", zap.String("source", src))
+		return
 	}
-	errutil.L.Error("the source seems to be a directory", zap.String("source", src))
+	log.Error("the source seems to be a directory", zap.String("source", src))
 	errutil.ErrNotFound(src, errutil.Lfs)
-	return false, true
+	return false, false
 }
 
 // ParseURL parses object path from a signed URL.
@@ -105,7 +104,7 @@ func ParseURL(u string) string {
 	re := regexp.MustCompile(`https:\/\/storage\.googleapis\.com\/[a-z0-9\-]+\/([^?]+)\?Expires=`)
 	parsed := re.FindStringSubmatch(u)
 	if len(parsed) < 2 {
-		errutil.L.Warn("ParseURL fails to parse", zap.String("url", u))
+		log.Warn("ParseURL fails to parse", zap.String("url", u))
 		return ""
 	}
 	return parsed[1]
@@ -141,29 +140,28 @@ type GenerateSignedURLsResponse struct {
 }
 
 // handleHTTPReq calls a signed url, and returns response in arg pointer.
-func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) (fail bool) {
+func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) (ok bool) {
 	var b bytes.Buffer
-	fail = true
 	if data != nil {
 		if err := json.NewEncoder(&b).Encode(data); err != nil {
-			errutil.L.Error("failed to encode http data", zap.Error(err))
+			log.Error("failed to encode http data", zap.Error(err))
 			return
 		}
 	}
 	q, err := http.NewRequest(http.MethodPost, gatewayAPI, &b)
 	if err != nil {
-		errutil.L.Error("failed to create signed URL http request", zap.Error(err))
+		log.Error("failed to create signed URL http request", zap.Error(err))
 		return
 	}
 	q.Header.Set("authorization", token)
 	r, err := client.Do(q)
 	if err != nil {
-		errutil.L.Error("failed to do signed URL http request", zap.Error(err))
+		log.Error("failed to do signed URL http request", zap.Error(err))
 		return
 	}
 	defer r.Body.Close()
-	if fail = httputil.CheckStatus(r.StatusCode); fail {
-		errutil.L.Error("http do signed URL request status is an error",
+	if ok = httputil.CheckStatus(r.StatusCode); !ok {
+		log.Error("http do signed URL request status is an error",
 			zap.Int("status code", r.StatusCode),
 			zap.String("status", http.StatusText(r.StatusCode)))
 		return
@@ -171,15 +169,15 @@ func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) (fail b
 	b.Reset()
 	tee := io.TeeReader(r.Body, &b)
 	if err = json.NewDecoder(tee).Decode(target); err != nil {
-		errutil.L.Error("failed to decode signed URL http response", zap.Error(err),
+		log.Error("failed to decode signed URL http response", zap.Error(err),
 			zap.String("content", b.String()))
 		return
 	}
 	if len(target.Error) > 0 {
-		errutil.L.Error("Error signed URL http result", zap.String("error", target.Error))
+		log.Error("Error signed URL http result", zap.String("error", target.Error))
 		return
 	}
-	return false
+	return true
 }
 
 func randomString() string {
@@ -189,7 +187,7 @@ func randomString() string {
 	// generate some random bytes, this shouldn't fail
 	_, err := rand.Read(randomness)
 	if err != nil {
-		errutil.L.Error("Failed to generate random number", zap.Error(err))
+		log.Error("Failed to generate random number", zap.Error(err))
 		return ""
 	}
 
@@ -221,18 +219,18 @@ func CreateExpireFileName(expTime time.Duration) string {
 	b.WriteByte('-')
 	b.WriteString(randPostfix)
 	expFilename = b.String()
-	errutil.L.Debug("CreateExpireFileName succeeded", zap.Duration("expire time", expTime),
+	log.Debug("CreateExpireFileName succeeded", zap.Duration("expire time", expTime),
 		zap.String("result", expFilename))
 	return expFilename
 }
 
 // UploadFile uploads a file given by its filename to the Google Cloud Storage.
-func UploadFile(u, filename string) (fail bool) {
+func UploadFile(u, filename string) (ok bool) {
 	f, err := os.Open(filename)
 	if err != nil {
-		errutil.L.Error("Failed to open file for uploading", zap.String("filename", filename),
+		log.Error("Failed to open file for uploading", zap.String("filename", filename),
 			zap.Error(err))
-		return true
+		return
 	}
 	defer f.Close()
 	return httputil.UploadReader(u, f)
@@ -245,17 +243,17 @@ func PushPaths(dst, src string) (string, string) {
 	newDst := pathutil.ToRelative(dst)
 	newDst = pathutil.PrefixedPathFromSource(newDst, src)
 	newSrc := path.Clean(src)
-	errutil.L.Debug("PushPaths", zap.String("input destination", dst),
+	log.Debug("PushPaths", zap.String("input destination", dst),
 		zap.String("input source", src), zap.String("output destination", newDst),
 		zap.String("output source", newSrc))
 	return newDst, newSrc
 }
 
 // PushGCS uploads a file or directory from the file system to Google Cloud Storage to
-// given destination with a human readable expire string. Returns if happened any error,
-// that was logged in that case.
-func PushGCS(dst, src, expires string, force bool) (fail bool) {
-	errutil.L.Debug("pushing...", zap.String("source", src), zap.String("destination", dst),
+// given destination with a human readable expire string. Returns if it was a success,
+// otherwise the error has been logged.
+func PushGCS(dst, src, expires string, force bool) (ok bool) {
+	log.Debug("pushing...", zap.String("source", src), zap.String("destination", dst),
 		zap.Bool("force", force))
 	expTime := humeutil.ParseRelativeAgeForHumans(expires)
 	if expTime == 0 {
@@ -263,7 +261,7 @@ func PushGCS(dst, src, expires string, force bool) (fail bool) {
 	}
 
 	var isF bool
-	if isF, fail = isFileSrc(src); fail {
+	if isF, ok = isFileSrc(src); !ok {
 		return
 	}
 
@@ -277,7 +275,7 @@ func PushGCS(dst, src, expires string, force bool) (fail bool) {
 		rps = []string{}
 		lps = []string{}
 		prefLen := len(src)
-		if err := filepath.Walk(src, func(filename string, info os.FileInfo, err error) error {
+		err := filepath.Walk(src, func(filename string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -287,9 +285,10 @@ func PushGCS(dst, src, expires string, force bool) (fail bool) {
 			rps = append(rps, path.Join(dst, filename[prefLen:]))
 			lps = append(lps, filename)
 			return nil
-		}); err != nil {
-			errutil.L.Error("failed to walk local directory for pushing", zap.Error(err))
-			return true
+		})
+		if err != nil {
+			log.Error("failed to walk local directory for pushing", zap.Error(err))
+			return false
 		}
 	}
 	count := len(rps) // uploading files until this, expire file works differently
@@ -304,9 +303,10 @@ func PushGCS(dst, src, expires string, force bool) (fail bool) {
 		request.Type = generateSignedURLsRequestPUSH
 	}
 	var t GenerateSignedURLsResponse
-	if fail = errutil.RetryOnFailure("get push signed URL", func() bool {
+	ok = errutil.RetryOnFailure("get push signed URL", func() bool {
 		return handleHTTPReq(request, &t)
-	}); fail {
+	})
+	if !ok {
 		return
 	}
 	us := t.Urls
@@ -314,18 +314,18 @@ func PushGCS(dst, src, expires string, force bool) (fail bool) {
 	exist := false
 	for i := 0; i < count; i, j = i+1, j+1 { // uploading files
 		if !force { // needs to be checked if nothing exists there
-			if exist, fail = httputil.CheckURL(us[j].URL); fail {
+			if exist, ok = httputil.CheckURL(us[j].URL); !ok {
 				return
 			}
 			if exist {
 				errutil.ErrAlreadyExists("Uploading object", lps[i], errutil.Gcs)
-				return true
+				return false
 			}
 			j++
 		}
-		errutil.L.Debug("Uploading...", zap.String("source", lps[i]),
+		log.Debug("Uploading...", zap.String("source", lps[i]),
 			zap.String("destination", rps[i]))
-		if fail = UploadFile(us[j].URL, lps[i]); fail {
+		if ok = UploadFile(us[j].URL, lps[i]); !ok {
 			return
 		}
 	}
@@ -334,12 +334,12 @@ func PushGCS(dst, src, expires string, force bool) (fail bool) {
 		if !force {
 			count = count*2 + 1
 		}
-		if fail = httputil.UploadReader(us[count].URL, strings.NewReader(dst)); fail {
+		if ok = httputil.UploadReader(us[count].URL, strings.NewReader(dst)); !ok {
 			return
 		}
 	}
 
-	return
+	return true
 }
 
 // PullPaths returns source and destination paths to pull a file from Google Cloud Storage.
@@ -350,7 +350,7 @@ func PullPaths(dst, src string) (string, string) {
 	newDst := pathutil.PathFromSource(dst, newSrc)
 	newSrc = pathutil.PrefixedPath(newSrc)
 	newDst = path.Clean(newDst)
-	errutil.L.Debug("PullPaths", zap.String("input destination", dst),
+	log.Debug("PullPaths", zap.String("input destination", dst),
 		zap.String("input source", src), zap.String("output destination", newDst),
 		zap.String("output source", newSrc))
 	return newDst, newSrc
@@ -358,87 +358,89 @@ func PullPaths(dst, src string) (string, string) {
 
 // PullGCS downloads a file or directory from the Google Cloud Storage to the file system
 // with given destination and source path.
-func PullGCS(dst, src string, force bool) (fail bool) {
-	errutil.L.Debug("pulling...", zap.String("source", src), zap.String("destination", dst),
+func PullGCS(dst, src string, force bool) (ok bool) {
+	log.Debug("pulling...", zap.String("source", src), zap.String("destination", dst),
 		zap.Bool("force", force))
 	ps := []string{src}
 	var t GenerateSignedURLsResponse
 	request := &GenerateSignedURLsRequest{Paths: ps, Type: generateSignedURLsRequestPULL}
-	if fail = errutil.RetryOnFailure("get pull signed URL", func() bool {
+	ok = errutil.RetryOnFailure("get pull signed URL", func() bool {
 		return handleHTTPReq(request, &t)
-	}); fail {
+	})
+	if !ok {
 		return
 	}
 	if len(t.Urls) == 1 {
-		if fail = PullFileGCS(dst, t.Urls[0].URL, force); fail {
+		if ok = PullFileGCS(dst, t.Urls[0].URL, force); !ok {
 			return
 		}
 	} else {
 		prefLen := len(src)
 		for _, u := range t.Urls {
 			obj := ParseURL(u.URL)
-			if fail = PullFileGCS(path.Join(dst, obj[prefLen:]), u.URL, force); fail {
+			if ok = PullFileGCS(path.Join(dst, obj[prefLen:]), u.URL, force); !ok {
 				return
 			}
 		}
 	}
-	return
+	return true
 }
 
 // PullFileGCS downloads a file from the Google Cloud Storage to the file system with given
 // source path.
-func PullFileGCS(dstFilename, u string, force bool) (fail bool) {
-	errutil.L.Debug("downloading...", zap.String("url", u), zap.String("destination", dstFilename))
+func PullFileGCS(dstFilename, u string, force bool) (ok bool) {
+	log.Debug("downloading...", zap.String("url", u), zap.String("destination", dstFilename))
 	if !force {
 		if _, err := os.Stat(dstFilename); err == nil {
 			errutil.ErrAlreadyExists("Downloading file", dstFilename, errutil.Lfs)
-			return true
+			return
 		}
 	}
 	err := os.MkdirAll(filepath.Dir(dstFilename), 0755)
 	if err != nil {
-		errutil.L.Error("Creating directory for pulling from Google Cloud Storage", zap.Error(err))
-		return true
+		log.Error("Creating directory for pulling from Google Cloud Storage", zap.Error(err))
+		return
 	}
 	var f *os.File
 	if f, err = os.Create(dstFilename); err != nil {
-		errutil.L.Error("Creating file for pulling from Google Cloud Storage", zap.Error(err))
-		return true
+		log.Error("Creating file for pulling from Google Cloud Storage", zap.Error(err))
+		return
 	}
 	defer f.Close()
-	fail = httputil.DownloadWriter(u, f)
-	errutil.L.Debug("PullFileGCS result", zap.Bool("success", !fail))
-	return
+	ok = httputil.DownloadWriter(u, f)
+	log.Debug("PullFileGCS result", zap.Bool("success", ok))
+	return true
 }
 
 // YankPath returns path to yank a file from Google Cloud Storage.
 // Path becomes a category prefixed path to the GCS Bucket.
 func YankPath(f string) string {
 	newF := pathutil.ToRelative(f)
-	errutil.L.Debug("YankPath", zap.String("input file", f), zap.String("output file", newF))
+	log.Debug("YankPath", zap.String("input file", f), zap.String("output file", newF))
 	return pathutil.PrefixedPath(newF)
 }
 
 // YankGCS deletes a file or directory from the Google Cloud Storage.
-func YankGCS(name string) (fail bool) {
+func YankGCS(name string) (ok bool) {
 	ps := []string{name}
 	var t GenerateSignedURLsResponse
 	request := &GenerateSignedURLsRequest{Paths: ps, Type: generateSignedURLsRequestYANK}
-	if fail = errutil.RetryOnFailure("get yank signed URL", func() bool {
+	ok = errutil.RetryOnFailure("get yank signed URL", func() bool {
 		return handleHTTPReq(request, &t)
-	}); fail {
+	})
+	if !ok {
 		return
 	}
 	if len(t.Urls) == 1 {
-		if fail = httputil.DeleteURL(t.Urls[0].URL); fail {
+		if ok = httputil.DeleteURL(t.Urls[0].URL); !ok {
 			return
 		}
 	} else {
 		for _, u := range t.Urls {
-			if fail = httputil.DeleteURL(u.URL); fail {
+			if ok = httputil.DeleteURL(u.URL); !ok {
 				return
 			}
 		}
 	}
-	return
+	return true
 }

@@ -5,42 +5,42 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	errutil "github.com/semaphoreci/artifact/pkg/util/err"
+	"github.com/semaphoreci/artifact/pkg/util/log"
 	"go.uber.org/zap"
 )
 
 var httpClient = &http.Client{}
 
 // CheckStatus checks if the status of the http response is a failure.
-func CheckStatus(s int) (fail bool) {
-	return s < http.StatusOK || s >= http.StatusMultipleChoices
+func CheckStatus(s int) (ok bool) {
+	return s >= http.StatusOK && s < http.StatusMultipleChoices
 }
 
 // formatIfErr checks if the http result is okay, logs any errors including
 // wrong status, and content in that case.
-func formatIfErr(s int, descr, u string, r io.Reader) (fail bool) {
-	if fail = CheckStatus(s); !fail {
+func formatIfErr(s int, descr, u string, r io.Reader) (ok bool) {
+	if ok = CheckStatus(s); ok {
 		return
 	}
 	content, err := ioutil.ReadAll(r)
 	if err != nil {
-		errutil.L.Error("Failed to read http response", zap.Error(err),
+		log.Error("Failed to read http response", zap.Error(err),
 			zap.String("while doing", descr), zap.String("url", u))
 		return
 	}
-	errutil.L.Warn("http status fail", zap.String("while doing", descr), zap.String("url", u),
+	log.Warn("http status fail", zap.String("while doing", descr), zap.String("url", u),
 		zap.Int("status code", s), zap.String("status", http.StatusText(s)),
 		zap.String("content", string(content)))
 	return
 }
 
 // do is a shortener for http methods that can't be accessed directly in Go.
-func do(descr, u, method string, content io.Reader) (fail bool) {
+func do(descr, u, method string, content io.Reader) (ok bool) {
 	req, err := http.NewRequest(http.MethodPut, u, content)
 	if err != nil {
-		errutil.L.Error("Failed to create new http request", zap.Error(err),
+		log.Error("Failed to create new http request", zap.Error(err),
 			zap.String("while doing", descr), zap.String("url", u))
-		return true
+		return
 	}
 	res, err := httpClient.Do(req)
 	defer res.Body.Close()
@@ -48,45 +48,44 @@ func do(descr, u, method string, content io.Reader) (fail bool) {
 }
 
 // UploadReader uploads content to the given signed URL.
-func UploadReader(u string, content io.Reader) (fail bool) {
+func UploadReader(u string, content io.Reader) (ok bool) {
 	return do("Upload", u, http.MethodPut, content)
 }
 
 // DownloadWriter downloads content from the given signed URL to the given io Writer.
-func DownloadWriter(u string, w io.Writer) (fail bool) {
+func DownloadWriter(u string, w io.Writer) (ok bool) {
 	resp, err := http.Get(u)
 	if err != nil {
-		errutil.L.Error("Failed to http get", zap.Error(err),
+		log.Error("Failed to http get", zap.Error(err),
 			zap.String("while doing", "Download"), zap.String("url", u))
-		return true
+		return
 	}
 	defer resp.Body.Close()
-	if fail = formatIfErr(resp.StatusCode, "Download", u, resp.Body); fail {
+	if ok = formatIfErr(resp.StatusCode, "Download", u, resp.Body); !ok {
 		return
 	}
 	if _, err = io.Copy(w, resp.Body); err != nil {
-		errutil.L.Error("Failed to read http response", zap.Error(err),
+		log.Error("Failed to read http response", zap.Error(err),
 			zap.String("while doing", "Download"), zap.String("url", u))
-		return true
+		return
 	}
-	return
+	return true
 }
 
 // DeleteURL deletes the target of the given signed URL.
-func DeleteURL(u string) (fail bool) {
+func DeleteURL(u string) (ok bool) {
 	return do("Delete", u, http.MethodDelete, nil)
 }
 
 // CheckURL checks if the given signed URL exists by a HEAD http request. Non-existance
 // doesn't fail with an error.
-func CheckURL(u string) (exist bool, fail bool) {
+func CheckURL(u string) (exist bool, ok bool) {
 	resp, err := http.Head(u)
 	if err != nil {
-		errutil.L.Error("HEAD error", zap.String("URL", u))
-		return false, true
+		log.Error("HEAD error", zap.String("URL", u))
+		return false, false
 	}
 	defer resp.Body.Close()
-	exist = CheckStatus(resp.StatusCode)
 
-	return
+	return CheckStatus(resp.StatusCode), true
 }

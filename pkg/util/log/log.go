@@ -1,4 +1,4 @@
-package errutil
+package log
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 var (
 	verbose bool
 	// L is the global logger.
-	L = Logger{zap.NewNop()}
+	def = Logger{zap.NewNop()}
 )
 
 type key int
@@ -39,7 +39,7 @@ func Init(v bool) {
 	if err != nil {
 		panic(fmt.Errorf("failed to initialize logger: %s", err.Error()))
 	}
-	L = Logger{l}
+	def = Logger{l}
 }
 
 // Logger is a wrapper for zap logger that may have custom functions on it.
@@ -76,7 +76,7 @@ func (l Logger) Debug(msg string, fields ...zap.Field) {
 // CreateContext returns a new logger with the given fields tagged to the logger, and the
 // context containing this logger.
 func CreateContext(ctx context.Context, fields ...zap.Field) (context.Context, *zap.Logger) {
-	l := L.With(fields...)
+	l := def.With(fields...)
 	return context.WithValue(ctx, logKey, l), l
 }
 
@@ -88,11 +88,36 @@ func CreateContextNop(ctx context.Context, fields ...zap.Field) context.Context 
 // WithContext returns a logger related to the given context.
 func WithContext(ctx context.Context) Logger {
 	if ctx == nil {
-		return L
+		return def
 	}
 
 	if ctxLogger, ok := ctx.Value(logKey).(Logger); ok {
 		return ctxLogger
 	}
-	return L
+	return def
+}
+
+// Debug writes a debug log with the default logger.
+func Debug(msg string, fields ...zap.Field) {
+	def.Debug(msg, fields...)
+}
+
+// Info writes an info log with the default logger.
+func Info(msg string, fields ...zap.Field) {
+	def.Info(msg, fields...)
+}
+
+// Warn writes a warning log with the default logger.
+func Warn(msg string, fields ...zap.Field) {
+	def.Warn(msg, fields...)
+}
+
+// Error writes an error log with the default logger.
+func Error(msg string, fields ...zap.Field) {
+	def.Error(msg, fields...)
+}
+
+// Panic writes a panic level log with the default logger, and then panics.
+func Panic(msg string, fields ...zap.Field) {
+	def.Panic(msg, fields...)
 }

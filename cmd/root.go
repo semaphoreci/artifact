@@ -3,6 +3,7 @@ package cmd
 import (
 	homedir "github.com/mitchellh/go-homedir"
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
+	"github.com/semaphoreci/artifact/pkg/util/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -19,7 +20,7 @@ var rootCmd = &cobra.Command{
 	Short: "Semaphore 2.0 Artifact CLI",
 	Long:  "",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		errutil.Init(verbose)
+		log.Init(verbose)
 	},
 }
 
@@ -63,6 +64,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		errutil.L.Debug("Using config file", zap.String("filename", viper.ConfigFileUsed()))
+		log.Debug("Using config file", zap.String("filename", viper.ConfigFileUsed()))
 	}
 }
