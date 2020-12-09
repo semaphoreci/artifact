@@ -10,7 +10,7 @@ import (
 
 var (
 	verbose bool
-	// L is the global logger.
+	// def is the global logger.
 	def = Logger{zap.NewNop()}
 )
 

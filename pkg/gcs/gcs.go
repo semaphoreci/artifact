@@ -160,7 +160,7 @@ func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) (ok boo
 		return
 	}
 	defer r.Body.Close()
-	if ok = httputil.CheckStatus(r.StatusCode); !ok {
+	if ok = httputil.IsStatusOK(r.StatusCode); !ok {
 		log.Error("http do signed URL request status is an error",
 			zap.Int("status code", r.StatusCode),
 			zap.String("status", http.StatusText(r.StatusCode)))

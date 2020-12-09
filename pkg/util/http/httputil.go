@@ -11,15 +11,15 @@ import (
 
 var httpClient = &http.Client{}
 
-// CheckStatus checks if the status of the http response is a failure.
-func CheckStatus(s int) (ok bool) {
+// IsStatusOK checks if the status of the http response is a failure.
+func IsStatusOK(s int) (ok bool) {
 	return s >= http.StatusOK && s < http.StatusMultipleChoices
 }
 
 // formatIfErr checks if the http result is okay, logs any errors including
 // wrong status, and content in that case.
 func formatIfErr(s int, descr, u string, r io.Reader) (ok bool) {
-	if ok = CheckStatus(s); ok {
+	if ok = IsStatusOK(s); ok {
 		return
 	}
 	content, err := ioutil.ReadAll(r)
@@ -87,5 +87,5 @@ func CheckURL(u string) (exist bool, ok bool) {
 	}
 	defer resp.Body.Close()
 
-	return CheckStatus(resp.StatusCode), true
+	return IsStatusOK(resp.StatusCode), true
 }
