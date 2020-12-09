@@ -3,17 +3,25 @@ package cmd
 import (
 	homedir "github.com/mitchellh/go-homedir"
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
+	"github.com/semaphoreci/artifact/pkg/util/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	verbose bool
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "artifact",
 	Short: "Semaphore 2.0 Artifact CLI",
 	Long:  "",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		log.Init(verbose)
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -30,6 +38,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.artifact.yaml)")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose logging")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -55,6 +64,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		errutil.Debug("Using config file: %s", viper.ConfigFileUsed())
+		log.Debug("Using config file", zap.String("filename", viper.ConfigFileUsed()))
 	}
 }

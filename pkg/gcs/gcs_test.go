@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	httpmock "github.com/jarcoal/httpmock"
+	errutil "github.com/semaphoreci/artifact/pkg/util/err"
 	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
 )
 
@@ -24,13 +25,13 @@ var (
 	reqURL = os.Getenv("SEMAPHORE_ORGANIZATION_URL") + gatewayAPIBase
 )
 
-func TestRetryableHTTPReqSuccess(t *testing.T) {
+func TestRetryHTTPReqSuccess(t *testing.T) {
 	httpmock.Activate()
-	numOfTries := 0
+	numOfTries := 1
 	defer httpmock.DeactivateAndReset()
 	httpmock.RegisterResponder("POST", reqURL,
 		func(req *http.Request) (*http.Response, error) {
-			if numOfTries < 3 {
+			if numOfTries < errutil.RetryLimit {
 				numOfTries++
 				return httpmock.NewStringResponse(500, ""), nil
 			}
@@ -45,8 +46,10 @@ func TestRetryableHTTPReqSuccess(t *testing.T) {
 	request := &GenerateSignedURLsRequest{Paths: []string{"/test/path"}}
 	request.Type = generateSignedURLsRequestPUSH
 	var x GenerateSignedURLsResponse
-	err := retryableHTTPReq(request, &x)
-	if err != nil {
+	ok := errutil.RetryOnFailure("get mock result", func() bool {
+		return handleHTTPReq(request, &x)
+	})
+	if !ok {
 		t.Errorf("Failed to preform request")
 	}
 }
@@ -63,8 +66,10 @@ func TestRetryableHTTPReqFailure(t *testing.T) {
 	request := &GenerateSignedURLsRequest{Paths: []string{"/test/path"}}
 	request.Type = generateSignedURLsRequestPUSH
 	var x GenerateSignedURLsResponse
-	err := retryableHTTPReq(request, &x)
-	if err == nil {
+	ok := errutil.RetryOnFailure("get mock result", func() bool {
+		return handleHTTPReq(request, &x)
+	})
+	if ok {
 		t.Errorf("Result must be Failure")
 	}
 }

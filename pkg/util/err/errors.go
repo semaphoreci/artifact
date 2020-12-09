@@ -1,7 +1,8 @@
 package errutil
 
 import (
-	"fmt"
+	"github.com/semaphoreci/artifact/pkg/util/log"
+	"go.uber.org/zap"
 )
 
 const (
@@ -24,23 +25,15 @@ var lfsMap = map[Location]string{
 	Gcs: gcs,
 }
 
-// ErrAlreadyExists signifies, that a file or directory can't be overriden, because it already exists.
-type ErrAlreadyExists struct {
-	Filename string
-	Location Location
+// ErrAlreadyExists is called in case of a file conflict.
+func ErrAlreadyExists(description, filename string, location Location) {
+	log.Error("The file already exists; delete it first, or use --force flag",
+		zap.String("name", filename), zap.String("while", description),
+		zap.String("location", lfsMap[location]))
 }
 
-// Error returns the whole error about the existing file.
-func (err *ErrAlreadyExists) Error() string {
-	return fmt.Sprintf("The file '%s' already exists in the %s. It can be overwritten with --force flag",
-		err.Filename, lfsMap[err.Location])
-}
-
-// ErrNotFound is returned when a source copied from doesn't exists.
-type ErrNotFound ErrAlreadyExists
-
-// Error returns the whole error about the existing file.
-func (err *ErrNotFound) Error() string {
-	return fmt.Sprintf("The file or directory '%s' doesn't exists in the %s",
-		err.Filename, lfsMap[err.Location])
+// ErrNotFound is called when a source copied from doesn't exists.
+func ErrNotFound(filename string, location Location) {
+	log.Error("The file or directory doesn't exists", zap.String("name", filename),
+		zap.String("location", lfsMap[location]))
 }

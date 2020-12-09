@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/semaphoreci/artifact/pkg/gcs"
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
+	"github.com/semaphoreci/artifact/pkg/util/log"
 	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 // pullCmd represents the pull command
@@ -27,8 +31,9 @@ func runPullForCategory(cmd *cobra.Command, args []string, category, catID strin
 	errutil.Check(err)
 
 	dst, src = gcs.PullPaths(dst, src)
-	err = gcs.PullGCS(dst, src, force)
-	errutil.Check(err)
+	if ok := gcs.PullGCS(dst, src, force); !ok {
+		os.Exit(1) // error already logged
+	}
 	return dst, src
 }
 
@@ -43,7 +48,8 @@ var PullJobCmd = &cobra.Command{
 		catID, err := cmd.Flags().GetString("job-id")
 		errutil.Check(err)
 		dst, src := runPullForCategory(cmd, args, pathutil.JOB, catID)
-		errutil.Info("'%s' pulled to '%s' for current job.\n", src, dst)
+		log.Info("successful pull for current job", zap.String("source", src),
+			zap.String("destination", dst))
 	},
 }
 
@@ -58,7 +64,8 @@ var PullWorkflowCmd = &cobra.Command{
 		catID, err := cmd.Flags().GetString("workflow-id")
 		errutil.Check(err)
 		dst, src := runPullForCategory(cmd, args, pathutil.WORKFLOW, catID)
-		errutil.Info("'%s' pulled to '%s' for current workflow.\n", src, dst)
+		log.Info("successful pull for current workflow", zap.String("source", src),
+			zap.String("destination", dst))
 	},
 }
 
@@ -71,7 +78,8 @@ var PullProjectCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		dst, src := runPullForCategory(cmd, args, pathutil.PROJECT, "")
-		errutil.Info("'%s' pulled to '%s' for current project.\n", src, dst)
+		log.Info("successful pull for current project", zap.String("source", src),
+			zap.String("destination", dst))
 	},
 }
 
