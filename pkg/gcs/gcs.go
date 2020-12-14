@@ -35,9 +35,9 @@ var (
 	gatewayAPI string
 )
 
-// init initializes Google Coud Storage with the given bucket name in environment variable.
+// Init initializes Google Coud Storage with the given bucket name in environment variable.
 // Loads credentials from environment variable too.
-func init() {
+func Init() {
 	rand.Seed(time.Now().UnixNano())
 	token = os.Getenv("SEMAPHORE_ARTIFACT_TOKEN")
 	log.Debug("initiating artifact...", zap.String("token", token))
@@ -372,16 +372,17 @@ func PullGCS(dst, src string, force bool) (ok bool) {
 		return
 	}
 	if len(t.Urls) == 1 {
-		if ok = PullFileGCS(dst, t.Urls[0].URL, force); !ok {
-			return
+		url := t.Urls[0].URL
+		obj := ParseURL(url)
+		if strings.HasSuffix(obj, src) {
+			return PullFileGCS(dst, url, force)
 		}
-	} else {
-		prefLen := len(src)
-		for _, u := range t.Urls {
-			obj := ParseURL(u.URL)
-			if ok = PullFileGCS(path.Join(dst, obj[prefLen:]), u.URL, force); !ok {
-				return
-			}
+	}
+	prefLen := len(src)
+	for _, u := range t.Urls {
+		obj := ParseURL(u.URL)
+		if ok = PullFileGCS(path.Join(dst, obj[prefLen:]), u.URL, force); !ok {
+			return
 		}
 	}
 	return true
