@@ -357,6 +357,17 @@ func PullPaths(dst, src string) (string, string) {
 	return newDst, newSrc
 }
 
+func strIndexByteNthAfter(s string, b byte, count int) string {
+	for ; count > 0; count-- {
+		index := strings.IndexByte(s, b)
+		if index == -1 {
+			return s
+		}
+		s = s[index+1:]
+	}
+	return s
+}
+
 // PullGCS downloads a file or directory from the Google Cloud Storage to the file system
 // with given destination and source path.
 func PullGCS(dst, src string, force bool) (ok bool) {
@@ -374,9 +385,10 @@ func PullGCS(dst, src string, force bool) (ok bool) {
 	if len(t.Urls) == 1 {
 		url := t.Urls[0].URL
 		obj := ParseURL(url)
-		if strings.HasSuffix(obj, src) {
+		obj = strIndexByteNthAfter(obj, '/', 3) // removing <project-name>/<level>/<projectID>/
+		if obj == src {                         // they are the same: requested single file pull
 			return PullFileGCS(dst, url, force)
-		}
+		} // otherwise it will be downloaded as a directory
 	}
 	prefLen := len(src)
 	for _, u := range t.Urls {
