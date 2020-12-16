@@ -86,7 +86,9 @@ var PushProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, "",
+		catID, err := cmd.Flags().GetString("project-id")
+		errutil.Check(err)
+		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, catID,
 			viper.GetString("ProjectArtifactsExpire"))
 		log.Info("successful push for current project", zap.String("source", src),
 			zap.String("destination", dst))
