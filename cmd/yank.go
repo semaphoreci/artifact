@@ -83,4 +83,5 @@ func init() {
 
 	YankJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
 	YankWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
+	YankProjectCmd.Flags().StringP("project-id", "p", "", "set explicit project id")
 }

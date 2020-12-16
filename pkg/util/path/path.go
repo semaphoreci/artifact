@@ -1,9 +1,12 @@
 package pathutil
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/semaphoreci/artifact/pkg/util/log"
 )
 
 const (
@@ -40,6 +43,11 @@ func InitPathID(category, defVal string) {
 		categoryID = os.Getenv(CategoryEnv[category])
 	} else {
 		categoryID = defVal
+	}
+	if len(categoryID) == 0 {
+		log.Error(fmt.Sprintf("Please set %sID with %s env var or related flag", category,
+			CategoryEnv[category]))
+		os.Exit(1)
 	}
 	pluralName = pluralCategory[category]
 }

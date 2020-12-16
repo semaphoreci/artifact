@@ -121,4 +121,5 @@ Ny for N years
 
 	PushJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
 	PushWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
+	PushProjectCmd.Flags().StringP("project-id", "p", "", "set explicit project id")
 }
