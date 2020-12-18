@@ -72,5 +72,13 @@ func PathFromSource(dstFilepath, srcFilepath string) string {
 
 // ToRelative removes all ./, ../ etc prefixes from the string.
 func ToRelative(filepath string) string {
-	return strings.TrimLeft(path.Clean(filepath), "./")
+	cleaned := path.Clean(filepath)
+	if len(cleaned) == strings.Count(cleaned, ".") {
+		return ""
+	}
+	trimmed := strings.TrimLeft(cleaned, "./") // removed . and / chars from left
+	left := cleaned[:len(cleaned)-len(trimmed)]
+	// looking for . on the right side of the cut of left part
+	farLeft := strings.TrimRight(left, ".")
+	return cleaned[len(farLeft):]
 }

@@ -70,11 +70,41 @@ func TestPathFromSource(t *testing.T) {
 	}
 
 	testPathFromSource("", "/long/path/to/source", "source")
+	testPathFromSource("", "/long/path/to/.source", ".source")
 	testPathFromSource("", "long/path/to/source", "source")
+	testPathFromSource("", "long/path/to/.source", ".source")
 	testPathFromSource("destination", "/long/path/to/source", "destination")
+	testPathFromSource(".destination", "/long/path/to/source", ".destination")
+	testPathFromSource("destination", "/long/path/to/.source", "destination")
+	testPathFromSource(".destination", "/long/path/to/.source", ".destination")
 	testPathFromSource("destination", "long/path/to/source", "destination")
-	testPathFromSource("long/path/to/destination", "long/path/to/source", "long/path/to/destination")
-	testPathFromSource("/long/path/to/destination", "long/path/to/source", "/long/path/to/destination")
+	testPathFromSource(".destination", "long/path/to/source", ".destination")
+	testPathFromSource("destination", "long/path/to/.source", "destination")
+	testPathFromSource(".destination", "long/path/to/.source", ".destination")
+	testPathFromSource("long/path/to/destination", "long/path/to/source",
+		"long/path/to/destination")
+	testPathFromSource(".long/path/to/destination", "long/path/to/source",
+		".long/path/to/destination")
+	testPathFromSource("long/path/to/destination", ".long/path/to/source",
+		"long/path/to/destination")
+	testPathFromSource(".long/path/to/destination", ".long/path/to/source",
+		".long/path/to/destination")
+	testPathFromSource("/long/path/to/destination", "long/path/to/source",
+		"/long/path/to/destination")
+	testPathFromSource("/.long/path/to/destination", "long/path/to/source",
+		"/.long/path/to/destination")
+	testPathFromSource("/long/path/to/destination", ".long/path/to/source",
+		"/long/path/to/destination")
+	testPathFromSource("/.long/path/to/destination", ".long/path/to/source",
+		"/.long/path/to/destination")
+	testPathFromSource("./long/path/to/destination", "long/path/to/source",
+		"./long/path/to/destination")
+	testPathFromSource("./.long/path/to/destination", "long/path/to/source",
+		"./.long/path/to/destination")
+	testPathFromSource("./long/path/to/destination", ".long/path/to/source",
+		"./long/path/to/destination")
+	testPathFromSource("./.long/path/to/destination", ".long/path/to/source",
+		"./.long/path/to/destination")
 }
 
 func TestToRelative(t *testing.T) {
@@ -88,12 +118,23 @@ func TestToRelative(t *testing.T) {
 
 	testToRelative("", "")
 	testToRelative("./../source", "source")
+	testToRelative("./../.source", ".source")
 	testToRelative("./../source/..", "")
 	testToRelative("./../source/../longer", "longer")
 	testToRelative("./../source/../longer/", "longer")
+	testToRelative("./../source/../.longer/", ".longer")
 	testToRelative("./../source/../longer/.", "longer")
+	testToRelative("./../source/../.longer/.", ".longer")
+	testToRelative("./../.source/../longer/.", "longer")
+	testToRelative("./../.source/../.longer/.", ".longer")
 	testToRelative("source", "source")
+	testToRelative(".source", ".source")
 	testToRelative("/source", "source")
+	testToRelative("./source", "source")
+	testToRelative("/.source", ".source")
 	testToRelative("long/path/to/source", "long/path/to/source")
+	testToRelative(".long/path/to/source", ".long/path/to/source")
 	testToRelative("/long/path/to/source", "long/path/to/source")
+	testToRelative("/.long/path/to/source", ".long/path/to/source")
+	testToRelative("./.long/path/to/source", ".long/path/to/source")
 }
