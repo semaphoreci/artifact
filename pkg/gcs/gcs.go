@@ -307,9 +307,14 @@ func PushGCS(dst, src, expires string, force bool) (ok bool) {
 	ok = errutil.RetryOnFailure("get push signed URL", func() bool {
 		return handleHTTPReq(request, &t)
 	})
-	if !ok {
-		return
-	}
+	return ok && doPushGCS(dst, force, expTime, count, rps, lps, t)
+}
+
+// doPushGCS does the file or directory uploading from the file system to
+// Google Cloud Storage with the given expire if set. Returns if it was a success,
+// otherwise the error has been logged.
+func doPushGCS(dst string, force bool, expTime time.Duration, count int, rps, lps []string,
+	t GenerateSignedURLsResponse) (ok bool) {
 	us := t.Urls
 	j := 0
 	exist := false
@@ -357,7 +362,9 @@ func PullPaths(dst, src string) (string, string) {
 	return newDst, newSrc
 }
 
-func strIndexByteNthAfter(s string, b byte, count int) string {
+// cutPrefixByDelimMulti searches for delimiter b in s from the beginning by count times.
+// When the delimiter can't be found, it returns the rest string, otherwise cuts the prefix.
+func cutPrefixByDelimMulti(s string, b byte, count int) string {
 	for ; count > 0; count-- {
 		index := strings.IndexByte(s, b)
 		if index == -1 {
@@ -379,19 +386,22 @@ func PullGCS(dst, src string, force bool) (ok bool) {
 	ok = errutil.RetryOnFailure("get pull signed URL", func() bool {
 		return handleHTTPReq(request, &t)
 	})
-	if !ok {
-		return
-	}
-	if len(t.Urls) == 1 {
+	return ok && doPullGCS(dst, src, force, t)
+}
+
+// doPullGCS does the file downloading from the given signed URLs.
+func doPullGCS(dst, src string, force bool, t GenerateSignedURLsResponse) (ok bool) {
+	if len(t.Urls) == 1 { // one file only
 		url := t.Urls[0].URL
 		obj := ParseURL(url)
-		obj = strIndexByteNthAfter(obj, '/', 3) // removing <project-name>/<level>/<projectID>/
-		if obj == src {                         // they are the same: requested single file pull
+		// removing <project-name>/<category>/<projectID>/ prefix
+		obj = cutPrefixByDelimMulti(obj, '/', 3)
+		if obj == src { // they are the same: requested single file pull
 			return PullFileGCS(dst, url, force)
 		} // otherwise it will be downloaded as a directory
 	}
 	prefLen := len(src)
-	for _, u := range t.Urls {
+	for _, u := range t.Urls { // iterate all urls and put them in a directory structure
 		obj := ParseURL(u.URL)
 		if ok = PullFileGCS(path.Join(dst, obj[prefLen:]), u.URL, force); !ok {
 			return

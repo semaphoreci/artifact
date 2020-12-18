@@ -290,3 +290,23 @@ func TestPullPathsSetDefault(t *testing.T) {
 	check("./long/path/to/y.zip", "/long/path/to/x.zip", "long/path/to/y.zip", "artifacts/jobs/"+fixed+"/long/path/to/x.zip")
 	check("./long/path/to/y.zip", "./long/path/to/x.zip", "long/path/to/y.zip", "artifacts/jobs/"+fixed+"/long/path/to/x.zip")
 }
+
+func TestCutPrefixByDelimMulti(t *testing.T) {
+	check := func(s, exp string, b byte, count int) {
+		res := cutPrefixByDelimMulti(s, b, count)
+		assert.Equal(t, exp, res, b, count)
+	}
+
+	check("/some/long/path/to/trim", "path/to/trim", '/', 3)
+	check("some/long/path/to/trim", "to/trim", '/', 3)
+	check("/long/path/to/trim", "to/trim", '/', 3)
+	check("long/path/to/trim", "trim", '/', 3)
+	check("/path/to/trim", "trim", '/', 3)
+	check("path/to/trim", "trim", '/', 3)
+	check("/to/trim", "trim", '/', 3)
+	check("to/trim", "trim", '/', 3)
+	check("/trim", "trim", '/', 3)
+	check("trim", "trim", '/', 3)
+	check("/", "", '/', 3)
+	check("", "", '/', 3)
+}
