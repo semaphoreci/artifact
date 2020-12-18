@@ -13,6 +13,9 @@ func TestMissingCategoryID(t *testing.T) {
 		assert.Equal(t, expOk, err == nil, categoryID, category)
 	}
 
+	oldProjectID := os.Getenv(CategoryEnv[PROJECT])
+	defer os.Setenv(CategoryEnv[PROJECT], oldProjectID)
+	os.Setenv(CategoryEnv[PROJECT], "")
 	p := "some_project"
 	check(PROJECT, "", false)
 	check(PROJECT, p, true)
@@ -22,6 +25,9 @@ func TestMissingCategoryID(t *testing.T) {
 	os.Setenv(CategoryEnv[PROJECT], "")
 	check(PROJECT, "", false)
 
+	oldWorkflowID := os.Getenv(CategoryEnv[WORKFLOW])
+	defer os.Setenv(CategoryEnv[WORKFLOW], oldWorkflowID)
+	os.Setenv(CategoryEnv[WORKFLOW], "")
 	w := "some_workflow"
 	check(WORKFLOW, "", false)
 	check(WORKFLOW, w, true)
@@ -31,6 +37,9 @@ func TestMissingCategoryID(t *testing.T) {
 	os.Setenv(CategoryEnv[WORKFLOW], "")
 	check(WORKFLOW, "", false)
 
+	oldJobID := os.Getenv(CategoryEnv[JOB])
+	defer os.Setenv(CategoryEnv[JOB], oldJobID)
+	os.Setenv(CategoryEnv[JOB], "")
 	j := "some_job"
 	check(JOB, "", false)
 	check(JOB, j, true)
