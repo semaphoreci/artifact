@@ -3,14 +3,14 @@ package httputil
 import (
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIsStatusOK(t *testing.T) {
 	check := func(statusCode int, exp bool) {
 		ok := IsStatusOK(statusCode)
-		if ok != exp {
-			t.Errorf("IsStatusOk doesn't match %t != expected(%t)", ok, exp)
-		}
+		assert.Equal(t, exp, ok, statusCode)
 	}
 
 	check(http.StatusContinue, false)
