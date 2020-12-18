@@ -21,7 +21,8 @@ don't need them any more.`,
 }
 
 func runYankForCategory(cmd *cobra.Command, args []string, category, catID string) string {
-	pathutil.InitPathID(category, catID)
+	err := pathutil.InitPathID(category, catID)
+	errutil.Check(err)
 	name := args[0]
 
 	name = gcs.YankPath(name)

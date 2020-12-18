@@ -21,7 +21,8 @@ to use them in a later phase, debug, or getting the results.`,
 }
 
 func runPullForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
-	pathutil.InitPathID(category, catID)
+	err := pathutil.InitPathID(category, catID)
+	errutil.Check(err)
 	src := args[0]
 
 	dst, err := cmd.Flags().GetString("destination")

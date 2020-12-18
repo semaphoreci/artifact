@@ -5,6 +5,43 @@ import (
 	"testing"
 )
 
+func TestMissingCategoryID(t *testing.T) {
+	check := func(category, categoryID string, expOk bool) {
+		err := InitPathID(category, categoryID)
+		if expOk != (err == nil) {
+			t.Errorf("not match result(%s), expected(%t) for missing categoryID(%s), cat: %s",
+				err, expOk, categoryID, category)
+		}
+	}
+
+	p := "some_project"
+	check(PROJECT, "", false)
+	check(PROJECT, p, true)
+	os.Setenv(CategoryEnv[PROJECT], p)
+	check(PROJECT, "", true)
+	check(PROJECT, p, true)
+	os.Setenv(CategoryEnv[PROJECT], "")
+	check(PROJECT, "", false)
+
+	w := "some_workflow"
+	check(WORKFLOW, "", false)
+	check(WORKFLOW, w, true)
+	os.Setenv(CategoryEnv[WORKFLOW], w)
+	check(WORKFLOW, "", true)
+	check(WORKFLOW, w, true)
+	os.Setenv(CategoryEnv[WORKFLOW], "")
+	check(WORKFLOW, "", false)
+
+	j := "some_job"
+	check(JOB, "", false)
+	check(JOB, j, true)
+	os.Setenv(CategoryEnv[JOB], j)
+	check(JOB, "", true)
+	check(JOB, j, true)
+	os.Setenv(CategoryEnv[JOB], "")
+	check(JOB, "", false)
+}
+
 func TestPrefixedPathEmptyDefault(t *testing.T) {
 	testPrefixedPath := func(category, filepath, expected string) {
 		InitPathID(category, "")

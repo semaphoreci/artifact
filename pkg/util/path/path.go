@@ -5,8 +5,6 @@ import (
 	"os"
 	"path"
 	"strings"
-
-	"github.com/semaphoreci/artifact/pkg/util/log"
 )
 
 const (
@@ -38,18 +36,18 @@ var (
 
 // InitPathID initiates path category ID. The default is an empty string, in that case the ID is read
 // from environment variable. Otherwise it comes from command-line argument --job-id or --workflow-id.
-func InitPathID(category, defVal string) {
+func InitPathID(category, defVal string) error {
 	if len(defVal) == 0 {
 		categoryID = os.Getenv(CategoryEnv[category])
 	} else {
 		categoryID = defVal
 	}
 	if len(categoryID) == 0 {
-		log.Error(fmt.Sprintf("Please set %sID with %s env var or related flag", category,
-			CategoryEnv[category]))
-		os.Exit(1)
+		return fmt.Errorf("Please set %sID with %s env var or related flag", category,
+			CategoryEnv[category])
 	}
 	pluralName = pluralCategory[category]
+	return nil
 }
 
 // PrefixedPath returns paths for Google Cloud Storage.

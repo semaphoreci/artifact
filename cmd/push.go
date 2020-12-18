@@ -22,7 +22,8 @@ while the rest of the semaphore process, or after it.`,
 
 func runPushForCategory(cmd *cobra.Command, args []string, category, catID,
 	expireDefault string) (string, string) {
-	pathutil.InitPathID(category, catID)
+	err := pathutil.InitPathID(category, catID)
+	errutil.Check(err)
 	src := args[0]
 
 	dst, err := cmd.Flags().GetString("destination")
