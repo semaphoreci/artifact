@@ -2,6 +2,7 @@ package cmd
 
 import (
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/semaphoreci/artifact/pkg/gcs"
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
 	"github.com/semaphoreci/artifact/pkg/util/log"
 	"github.com/spf13/cobra"
@@ -21,6 +22,7 @@ var rootCmd = &cobra.Command{
 	Long:  "",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		log.Init(verbose)
+		gcs.Init()
 	},
 }
 
