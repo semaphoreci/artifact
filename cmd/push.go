@@ -22,7 +22,8 @@ while the rest of the semaphore process, or after it.`,
 
 func runPushForCategory(cmd *cobra.Command, args []string, category, catID,
 	expireDefault string) (string, string) {
-	pathutil.InitPathID(category, catID)
+	err := pathutil.InitPathID(category, catID)
+	errutil.Check(err)
 	src := args[0]
 
 	dst, err := cmd.Flags().GetString("destination")
@@ -86,7 +87,9 @@ var PushProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, "",
+		catID, err := cmd.Flags().GetString("project-id")
+		errutil.Check(err)
+		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, catID,
 			viper.GetString("ProjectArtifactsExpire"))
 		log.Info("successful push for current project", zap.String("source", src),
 			zap.String("destination", dst))
@@ -121,4 +124,5 @@ Ny for N years
 
 	PushJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
 	PushWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
+	PushProjectCmd.Flags().StringP("project-id", "p", "", "set explicit project id")
 }

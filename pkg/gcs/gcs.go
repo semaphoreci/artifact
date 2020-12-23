@@ -38,6 +38,7 @@ var (
 // init initializes Google Coud Storage with the given bucket name in environment variable.
 // Loads credentials from environment variable too.
 func init() {
+	rand.Seed(time.Now().UnixNano())
 	token = os.Getenv("SEMAPHORE_ARTIFACT_TOKEN")
 	log.Debug("initiating artifact...", zap.String("token", token))
 	orgURL := os.Getenv("SEMAPHORE_ORGANIZATION_URL")

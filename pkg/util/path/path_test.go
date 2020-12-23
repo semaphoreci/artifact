@@ -3,16 +3,58 @@ package pathutil
 import (
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
+func TestMissingCategoryID(t *testing.T) {
+	check := func(category, categoryID string, expOk bool) {
+		err := InitPathID(category, categoryID)
+		assert.Equal(t, expOk, err == nil, categoryID, category)
+	}
+
+	oldProjectID := os.Getenv(CategoryEnv[PROJECT])
+	defer os.Setenv(CategoryEnv[PROJECT], oldProjectID)
+	os.Setenv(CategoryEnv[PROJECT], "")
+	p := "some_project"
+	check(PROJECT, "", false)
+	check(PROJECT, p, true)
+	os.Setenv(CategoryEnv[PROJECT], p)
+	check(PROJECT, "", true)
+	check(PROJECT, p, true)
+	os.Setenv(CategoryEnv[PROJECT], "")
+	check(PROJECT, "", false)
+
+	oldWorkflowID := os.Getenv(CategoryEnv[WORKFLOW])
+	defer os.Setenv(CategoryEnv[WORKFLOW], oldWorkflowID)
+	os.Setenv(CategoryEnv[WORKFLOW], "")
+	w := "some_workflow"
+	check(WORKFLOW, "", false)
+	check(WORKFLOW, w, true)
+	os.Setenv(CategoryEnv[WORKFLOW], w)
+	check(WORKFLOW, "", true)
+	check(WORKFLOW, w, true)
+	os.Setenv(CategoryEnv[WORKFLOW], "")
+	check(WORKFLOW, "", false)
+
+	oldJobID := os.Getenv(CategoryEnv[JOB])
+	defer os.Setenv(CategoryEnv[JOB], oldJobID)
+	os.Setenv(CategoryEnv[JOB], "")
+	j := "some_job"
+	check(JOB, "", false)
+	check(JOB, j, true)
+	os.Setenv(CategoryEnv[JOB], j)
+	check(JOB, "", true)
+	check(JOB, j, true)
+	os.Setenv(CategoryEnv[JOB], "")
+	check(JOB, "", false)
+}
+
 func TestPrefixedPathEmptyDefault(t *testing.T) {
-	testPrefixedPath := func(category, filepath, expected string) {
+	check := func(category, filepath, expected string) {
 		InitPathID(category, "")
 		result := PrefixedPath(filepath)
-		if result != expected {
-			t.Errorf("not match result(%s) with expected(%s) for category(%s) and filepath(%s)",
-				result, expected, category, filepath)
-		}
+		assert.Equal(t, expected, result, category, filepath)
 	}
 
 	projectID := "PR_01"
@@ -21,25 +63,22 @@ func TestPrefixedPathEmptyDefault(t *testing.T) {
 	os.Setenv(CategoryEnv[WORKFLOW], workflowID)
 	jobID := "JOB_03"
 	os.Setenv(CategoryEnv[JOB], jobID)
-	testPrefixedPath(PROJECT, ".", "artifacts/projects/"+projectID)
-	testPrefixedPath(PROJECT, "x.zip", "artifacts/projects/"+projectID+"/x.zip")
-	testPrefixedPath(PROJECT, "y.zip", "artifacts/projects/"+projectID+"/y.zip")
-	testPrefixedPath(PROJECT, "tmp/x.zip", "artifacts/projects/"+projectID+"/tmp/x.zip")
-	testPrefixedPath(PROJECT, "/tmp/x.zip", "artifacts/projects/"+projectID+"/tmp/x.zip")
-	testPrefixedPath(WORKFLOW, "x.zip", "artifacts/workflows/"+workflowID+"/x.zip")
-	testPrefixedPath(WORKFLOW, "path/to/the/deep/x.zip", "artifacts/workflows/"+workflowID+
+	check(PROJECT, ".", "artifacts/projects/"+projectID)
+	check(PROJECT, "x.zip", "artifacts/projects/"+projectID+"/x.zip")
+	check(PROJECT, "y.zip", "artifacts/projects/"+projectID+"/y.zip")
+	check(PROJECT, "tmp/x.zip", "artifacts/projects/"+projectID+"/tmp/x.zip")
+	check(PROJECT, "/tmp/x.zip", "artifacts/projects/"+projectID+"/tmp/x.zip")
+	check(WORKFLOW, "x.zip", "artifacts/workflows/"+workflowID+"/x.zip")
+	check(WORKFLOW, "path/to/the/deep/x.zip", "artifacts/workflows/"+workflowID+
 		"/path/to/the/deep/x.zip")
-	testPrefixedPath(JOB, "x.zip", "artifacts/jobs/"+jobID+"/x.zip")
+	check(JOB, "x.zip", "artifacts/jobs/"+jobID+"/x.zip")
 }
 
 func TestPrefixedPathSetDefault(t *testing.T) {
-	testPrefixedPath := func(category, filepath, expected string) {
+	check := func(category, filepath, expected string) {
 		InitPathID(category, "fixed")
 		result := PrefixedPath(filepath)
-		if result != expected {
-			t.Errorf("not match result(%s) with expected(%s) for category(%s) and filepath(%s)",
-				result, expected, category, filepath)
-		}
+		assert.Equal(t, expected, result, category, filepath)
 	}
 
 	projectID := "PR_01"
@@ -49,92 +88,73 @@ func TestPrefixedPathSetDefault(t *testing.T) {
 	jobID := "JOB_03"
 	os.Setenv(CategoryEnv[JOB], jobID)
 	fixed := "fixed"
-	testPrefixedPath(JOB, ".", "artifacts/jobs/"+fixed)
-	testPrefixedPath(JOB, "x.zip", "artifacts/jobs/"+fixed+"/x.zip")
-	testPrefixedPath(JOB, "y.zip", "artifacts/jobs/"+fixed+"/y.zip")
-	testPrefixedPath(JOB, "tmp/x.zip", "artifacts/jobs/"+fixed+"/tmp/x.zip")
-	testPrefixedPath(JOB, "/tmp/x.zip", "artifacts/jobs/"+fixed+"/tmp/x.zip")
-	testPrefixedPath(PROJECT, "x.zip", "artifacts/projects/"+fixed+"/x.zip")
-	testPrefixedPath(PROJECT, "path/to/the/deep/x.zip", "artifacts/projects/"+fixed+
-		"/path/to/the/deep/x.zip")
-	testPrefixedPath(WORKFLOW, "x.zip", "artifacts/workflows/"+fixed+"/x.zip")
+	check(JOB, ".", "artifacts/jobs/"+fixed)
+	check(JOB, "x.zip", "artifacts/jobs/"+fixed+"/x.zip")
+	check(JOB, "y.zip", "artifacts/jobs/"+fixed+"/y.zip")
+	check(JOB, "tmp/x.zip", "artifacts/jobs/"+fixed+"/tmp/x.zip")
+	check(JOB, "/tmp/x.zip", "artifacts/jobs/"+fixed+"/tmp/x.zip")
+	check(PROJECT, "x.zip", "artifacts/projects/"+fixed+"/x.zip")
+	check(PROJECT, "path/to/the/deep/x.zip", "artifacts/projects/"+fixed+"/path/to/the/deep/x.zip")
+	check(WORKFLOW, "x.zip", "artifacts/workflows/"+fixed+"/x.zip")
 }
 
 func TestPathFromSource(t *testing.T) {
-	testPathFromSource := func(dst, src, expDst string) {
+	check := func(dst, src, expDst string) {
 		result := PathFromSource(dst, src)
-		if result != expDst {
-			t.Errorf("not match result(%s) with expected(%s) for dst(%s) and src(%s)",
-				result, expDst, dst, src)
-		}
+		assert.Equal(t, expDst, result, dst, src)
 	}
 
-	testPathFromSource("", "/long/path/to/source", "source")
-	testPathFromSource("", "/long/path/to/.source", ".source")
-	testPathFromSource("", "long/path/to/source", "source")
-	testPathFromSource("", "long/path/to/.source", ".source")
-	testPathFromSource("destination", "/long/path/to/source", "destination")
-	testPathFromSource(".destination", "/long/path/to/source", ".destination")
-	testPathFromSource("destination", "/long/path/to/.source", "destination")
-	testPathFromSource(".destination", "/long/path/to/.source", ".destination")
-	testPathFromSource("destination", "long/path/to/source", "destination")
-	testPathFromSource(".destination", "long/path/to/source", ".destination")
-	testPathFromSource("destination", "long/path/to/.source", "destination")
-	testPathFromSource(".destination", "long/path/to/.source", ".destination")
-	testPathFromSource("long/path/to/destination", "long/path/to/source",
-		"long/path/to/destination")
-	testPathFromSource(".long/path/to/destination", "long/path/to/source",
-		".long/path/to/destination")
-	testPathFromSource("long/path/to/destination", ".long/path/to/source",
-		"long/path/to/destination")
-	testPathFromSource(".long/path/to/destination", ".long/path/to/source",
-		".long/path/to/destination")
-	testPathFromSource("/long/path/to/destination", "long/path/to/source",
-		"/long/path/to/destination")
-	testPathFromSource("/.long/path/to/destination", "long/path/to/source",
-		"/.long/path/to/destination")
-	testPathFromSource("/long/path/to/destination", ".long/path/to/source",
-		"/long/path/to/destination")
-	testPathFromSource("/.long/path/to/destination", ".long/path/to/source",
-		"/.long/path/to/destination")
-	testPathFromSource("./long/path/to/destination", "long/path/to/source",
-		"./long/path/to/destination")
-	testPathFromSource("./.long/path/to/destination", "long/path/to/source",
-		"./.long/path/to/destination")
-	testPathFromSource("./long/path/to/destination", ".long/path/to/source",
-		"./long/path/to/destination")
-	testPathFromSource("./.long/path/to/destination", ".long/path/to/source",
-		"./.long/path/to/destination")
+	check("", "/long/path/to/source", "source")
+	check("", "/long/path/to/.source", ".source")
+	check("", "long/path/to/source", "source")
+	check("", "long/path/to/.source", ".source")
+	check("destination", "/long/path/to/source", "destination")
+	check(".destination", "/long/path/to/source", ".destination")
+	check("destination", "/long/path/to/.source", "destination")
+	check(".destination", "/long/path/to/.source", ".destination")
+	check("destination", "long/path/to/source", "destination")
+	check(".destination", "long/path/to/source", ".destination")
+	check("destination", "long/path/to/.source", "destination")
+	check(".destination", "long/path/to/.source", ".destination")
+	check("long/path/to/destination", "long/path/to/source", "long/path/to/destination")
+	check(".long/path/to/destination", "long/path/to/source", ".long/path/to/destination")
+	check("long/path/to/destination", ".long/path/to/source", "long/path/to/destination")
+	check(".long/path/to/destination", ".long/path/to/source", ".long/path/to/destination")
+	check("/long/path/to/destination", "long/path/to/source", "/long/path/to/destination")
+	check("/.long/path/to/destination", "long/path/to/source", "/.long/path/to/destination")
+	check("/long/path/to/destination", ".long/path/to/source", "/long/path/to/destination")
+	check("/.long/path/to/destination", ".long/path/to/source", "/.long/path/to/destination")
+	check("./long/path/to/destination", "long/path/to/source", "./long/path/to/destination")
+	check("./.long/path/to/destination", "long/path/to/source", "./.long/path/to/destination")
+	check("./long/path/to/destination", ".long/path/to/source", "./long/path/to/destination")
+	check("./.long/path/to/destination", ".long/path/to/source", "./.long/path/to/destination")
 }
 
 func TestToRelative(t *testing.T) {
-	testToRelative := func(src, expected string) {
+	check := func(src, expected string) {
 		result := ToRelative(src)
-		if result != expected {
-			t.Errorf("not match result(%s) with expected(%s) for src(%s)",
-				result, expected, src)
-		}
+		assert.Equal(t, expected, result, src)
 	}
 
-	testToRelative("", "")
-	testToRelative("./../source", "source")
-	testToRelative("./../.source", ".source")
-	testToRelative("./../source/..", "")
-	testToRelative("./../source/../longer", "longer")
-	testToRelative("./../source/../longer/", "longer")
-	testToRelative("./../source/../.longer/", ".longer")
-	testToRelative("./../source/../longer/.", "longer")
-	testToRelative("./../source/../.longer/.", ".longer")
-	testToRelative("./../.source/../longer/.", "longer")
-	testToRelative("./../.source/../.longer/.", ".longer")
-	testToRelative("source", "source")
-	testToRelative(".source", ".source")
-	testToRelative("/source", "source")
-	testToRelative("./source", "source")
-	testToRelative("/.source", ".source")
-	testToRelative("long/path/to/source", "long/path/to/source")
-	testToRelative(".long/path/to/source", ".long/path/to/source")
-	testToRelative("/long/path/to/source", "long/path/to/source")
-	testToRelative("/.long/path/to/source", ".long/path/to/source")
-	testToRelative("./.long/path/to/source", ".long/path/to/source")
+	check("", "")
+	check("./../source", "source")
+	check("./../.source", ".source")
+	check("./../source/..", "")
+	check("./../source/../longer", "longer")
+	check("./../source/../longer/", "longer")
+	check("./../source/../.longer/", ".longer")
+	check("./../source/../longer/.", "longer")
+	check("./../source/../.longer/.", ".longer")
+	check("./../.source/../longer/.", "longer")
+	check("./../.source/../.longer/.", ".longer")
+	check("source", "source")
+	check(".source", ".source")
+	check("/source", "source")
+	check("./source", "source")
+	check("/.source", ".source")
+	check("long/path/to/source", "long/path/to/source")
+	check(".long/path/to/source", ".long/path/to/source")
+	check("/long/path/to/source", "long/path/to/source")
+	check("/.long/path/to/source", ".long/path/to/source")
+	check("./.long/path/to/source", ".long/path/to/source")
 }
