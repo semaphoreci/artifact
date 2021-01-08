@@ -13,8 +13,9 @@ import (
 
 // yankCmd represents the yank command
 var yankCmd = &cobra.Command{
-	Use:   "yank",
-	Short: "Deletes a file or directory from the storage you pushed earlier",
+	Use:     "yank",
+	Aliases: []string{"delete"},
+	Short:   "Deletes a file or directory from the storage you pushed earlier",
 	Long: `You may store files project, workflow or job related files with
 artifact push. With artifact yank you can delete them if you
 don't need them any more.`,
