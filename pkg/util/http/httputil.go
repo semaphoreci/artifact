@@ -4,12 +4,25 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/semaphoreci/artifact/pkg/util/log"
 	"go.uber.org/zap"
 )
 
-var httpClient = &http.Client{}
+// HTTPClient is an interface for http client to be mockable.
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+var httpClient HTTPClient
+
+func init() {
+	if !strings.HasSuffix(os.Args[0], ".test") { // not testing
+		httpClient = &http.Client{}
+	}
+}
 
 // IsStatusOK checks if the status of the http response is a failure.
 func IsStatusOK(s int) (ok bool) {
@@ -35,8 +48,8 @@ func formatIfErr(s int, descr, u string, r io.Reader) (ok bool) {
 }
 
 // do is a shortener for http methods that can't be accessed directly in Go.
-func do(descr, u, method string, content io.Reader) (ok bool) {
-	req, err := http.NewRequest(http.MethodPut, u, content)
+func do(descr, u, method string, content io.Reader, downloadTo io.Writer) (ok bool) {
+	req, err := http.NewRequest(method, u, content)
 	if err != nil {
 		log.Error("Failed to create new http request", zap.Error(err),
 			zap.String("while doing", descr), zap.String("url", u))
@@ -44,37 +57,29 @@ func do(descr, u, method string, content io.Reader) (ok bool) {
 	}
 	res, err := httpClient.Do(req)
 	defer res.Body.Close()
-	return formatIfErr(res.StatusCode, "Upload", u, res.Body)
+	if downloadTo != nil {
+		if _, err = io.Copy(downloadTo, res.Body); err != nil {
+			log.Error("Failed to read http response", zap.Error(err),
+				zap.String("while doing", "Download"), zap.String("url", u))
+			return false
+		}
+	}
+	return formatIfErr(res.StatusCode, descr, u, res.Body)
 }
 
 // UploadReader uploads content to the given signed URL.
 func UploadReader(u string, content io.Reader) (ok bool) {
-	return do("Upload", u, http.MethodPut, content)
+	return do("Upload", u, http.MethodPut, content, nil)
 }
 
 // DownloadWriter downloads content from the given signed URL to the given io Writer.
 func DownloadWriter(u string, w io.Writer) (ok bool) {
-	resp, err := http.Get(u)
-	if err != nil {
-		log.Error("Failed to http get", zap.Error(err),
-			zap.String("while doing", "Download"), zap.String("url", u))
-		return
-	}
-	defer resp.Body.Close()
-	if ok = formatIfErr(resp.StatusCode, "Download", u, resp.Body); !ok {
-		return
-	}
-	if _, err = io.Copy(w, resp.Body); err != nil {
-		log.Error("Failed to read http response", zap.Error(err),
-			zap.String("while doing", "Download"), zap.String("url", u))
-		return
-	}
-	return true
+	return do("Download", u, http.MethodGet, nil, w)
 }
 
 // DeleteURL deletes the target of the given signed URL.
 func DeleteURL(u string) (ok bool) {
-	return do("Delete", u, http.MethodDelete, nil)
+	return do("Delete", u, http.MethodDelete, nil, nil)
 }
 
 // CheckURL checks if the given signed URL exists by a HEAD http request. Non-existance
