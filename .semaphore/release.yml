@@ -14,7 +14,7 @@ blocks:
         - name: artifact-robot-ghtoken
       prologue:
         commands:
-          - sem-version go 1.11
+          - sem-version go 1.12
           - "export GOPATH=~/go"
           - "export PATH=~/go/bin:$PATH"
           - checkout
