@@ -62,7 +62,7 @@ From your development environment:
 TODO: this is not done yet
 
 ```sh
-sem artifact push project --project payment-api myapp-v3.tar
+sem artifact push project --project-id payment-api myapp-v3.tar
 sem artifact pull project -p payment-api myapp-v3.tar
 ```
 
@@ -85,7 +85,7 @@ From your development environment:
 TODO: this is not done yet
 
 ```sh
-sem artifact push workflow --workflow <WORKFLOW_ID> myapp-v3.tar
+sem artifact push workflow --workflow-id <WORKFLOW_ID> myapp-v3.tar
 sem artifact pull workflow -w <WORKFLOW_ID> myapp-v3.tar
 ```
 
@@ -108,8 +108,8 @@ From your development environment:
 TODO: this is not done yet
 
 ```sh
-sem artifact push job --job <JOB_ID> logs/build.log
-sem artifact pull job -p <JOB_ID> logs/build.log
+sem artifact push job --job-id <JOB_ID> logs/build.log
+sem artifact pull job -j <JOB_ID> logs/build.log
 ```
 
 You can also view and download artifacts on the job page in the UI.
