@@ -53,6 +53,14 @@ func (l Logger) Error(msg string, fields ...zap.Field) {
 	l.Logger.Error(msg, fields...)
 }
 
+// VerboseError is like Error, but only when in verbose mode.
+func (l Logger) VerboseError(msg string, fields ...zap.Field) {
+	if verbose {
+		log.Println(msg)
+	}
+	l.Logger.Error(msg, fields...)
+}
+
 // Warn wraps printing a nice message to the user, and logging the warning to the zap logger.
 func (l Logger) Warn(msg string, fields ...zap.Field) {
 	log.Println(msg)
@@ -115,6 +123,11 @@ func Warn(msg string, fields ...zap.Field) {
 // Error writes an error log with the default logger.
 func Error(msg string, fields ...zap.Field) {
 	def.Error(msg, fields...)
+}
+
+// VerboseError is like Error, but only when in verbose mode.
+func VerboseError(msg string, fields ...zap.Field) {
+	def.VerboseError(msg, fields...)
 }
 
 // Panic writes a panic level log with the default logger, and then panics.

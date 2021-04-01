@@ -58,11 +58,8 @@ func isFile(filename string) (isF bool, ok bool) {
 	if err == nil {
 		return !fi.IsDir(), true
 	}
-	if os.IsNotExist(err) {
-		return false, true
-	}
-	log.Error("looking for a file failed", zap.Error(err))
-	return
+	log.Error("Failed to find file to push", zap.String("filename", filename), zap.Error(err))
+	return false, false
 }
 
 // isDir returns if the given path points to a directory in the local file system.
@@ -71,11 +68,8 @@ func isDir(filename string) (isD bool, ok bool) {
 	if err == nil {
 		return fi.IsDir(), true
 	}
-	if os.IsNotExist(err) {
-		return false, true
-	}
-	log.Error("looking for a directory failed", zap.Error(err))
-	return
+	log.Error("Failed to find dir to push", zap.String("path", filename), zap.Error(err))
+	return false, false
 }
 
 // isFileSrc checks, if the given source exists, and if it's a file.
@@ -95,7 +89,6 @@ func isFileSrc(src string) (isF bool, ok bool) {
 		log.Debug("the source seems to be a directory", zap.String("source", src))
 		return
 	}
-	log.Error("the source seems to be a directory", zap.String("source", src))
 	errutil.ErrNotFound(src, errutil.Lfs)
 	return false, false
 }
@@ -145,24 +138,24 @@ func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) (ok boo
 	var b bytes.Buffer
 	if data != nil {
 		if err := json.NewEncoder(&b).Encode(data); err != nil {
-			log.Error("failed to encode http data", zap.Error(err))
+			log.VerboseError("failed to encode http data", zap.Error(err))
 			return
 		}
 	}
 	q, err := http.NewRequest(http.MethodPost, gatewayAPI, &b)
 	if err != nil {
-		log.Error("failed to create signed URL http request", zap.Error(err))
+		log.VerboseError("failed to create signed URL http request", zap.Error(err))
 		return
 	}
 	q.Header.Set("authorization", token)
 	r, err := client.Do(q)
 	if err != nil {
-		log.Error("failed to do signed URL http request", zap.Error(err))
+		log.VerboseError("failed to do signed URL http request", zap.Error(err))
 		return
 	}
 	defer r.Body.Close()
 	if ok = httputil.IsStatusOK(r.StatusCode); !ok {
-		log.Error("http do signed URL request status is an error",
+		log.VerboseError("http do signed URL request status is an error",
 			zap.Int("status code", r.StatusCode),
 			zap.String("status", http.StatusText(r.StatusCode)))
 		return
@@ -170,12 +163,12 @@ func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) (ok boo
 	b.Reset()
 	tee := io.TeeReader(r.Body, &b)
 	if err = json.NewDecoder(tee).Decode(target); err != nil {
-		log.Error("failed to decode signed URL http response", zap.Error(err),
+		log.VerboseError("failed to decode signed URL http response", zap.Error(err),
 			zap.String("content", b.String()))
 		return
 	}
 	if len(target.Error) > 0 {
-		log.Error("Error signed URL http result", zap.String("error", target.Error))
+		log.VerboseError("Error signed URL http result", zap.String("error", target.Error))
 		return
 	}
 	return true
@@ -258,12 +251,12 @@ func PushGCS(dst, src, expires string, force bool) (ok bool) {
 		zap.Bool("force", force))
 	expTime := humeutil.ParseRelativeAgeForHumans(expires)
 	if expTime == 0 {
-		return true
+		return false
 	}
 
 	var isF bool
 	if isF, ok = isFileSrc(src); !ok {
-		return
+		return false
 	}
 
 	// local and remote paths
@@ -288,7 +281,7 @@ func PushGCS(dst, src, expires string, force bool) (ok bool) {
 			return nil
 		})
 		if err != nil {
-			log.Error("failed to walk local directory for pushing", zap.Error(err))
+			log.Error("Failed to walk local directory for pushing", zap.Error(err))
 			return false
 		}
 	}
@@ -307,7 +300,12 @@ func PushGCS(dst, src, expires string, force bool) (ok bool) {
 	ok = errutil.RetryOnFailure("get push signed URL", func() bool {
 		return handleHTTPReq(request, &t)
 	})
-	return ok && doPushGCS(dst, force, expTime, count, rps, lps, t)
+	ok = ok && doPushGCS(dst, force, expTime, count, rps, lps, t)
+	if !ok {
+		log.Error("File or dir not found. Please check if the source you are trying to push exists.")
+		return false
+	}
+	return true
 }
 
 // doPushGCS does the file or directory uploading from the file system to
@@ -386,7 +384,12 @@ func PullGCS(dst, src string, force bool) (ok bool) {
 	ok = errutil.RetryOnFailure("get pull signed URL", func() bool {
 		return handleHTTPReq(request, &t)
 	})
-	return ok && doPullGCS(dst, src, force, t)
+	ok = ok && doPullGCS(dst, src, force, t)
+	if !ok {
+		log.Error("Artifact not found. Please check if the artifact you are trying to pull exists.")
+		return false
+	}
+	return true
 }
 
 // doPullGCS does the file downloading from the given signed URLs.
@@ -422,18 +425,18 @@ func PullFileGCS(dstFilename, u string, force bool) (ok bool) {
 	}
 	err := os.MkdirAll(filepath.Dir(dstFilename), 0755)
 	if err != nil {
-		log.Error("Creating directory for pulling from Google Cloud Storage", zap.Error(err))
+		log.Error("Failed to create dir for pulling from Google Cloud Storage", zap.Error(err))
 		return
 	}
 	var f *os.File
 	if f, err = os.Create(dstFilename); err != nil {
-		log.Error("Creating file for pulling from Google Cloud Storage", zap.Error(err))
+		log.Error("Failed to create file for pulling from Google Cloud Storage", zap.Error(err))
 		return
 	}
 	defer f.Close()
 	ok = httputil.DownloadWriter(u, f)
 	log.Debug("PullFileGCS result", zap.Bool("success", ok))
-	return true
+	return ok
 }
 
 // YankPath returns path to yank a file from Google Cloud Storage.
@@ -452,17 +455,23 @@ func YankGCS(name string) (ok bool) {
 	ok = errutil.RetryOnFailure("get yank signed URL", func() bool {
 		return handleHTTPReq(request, &t)
 	})
+	ok = ok && doYankGCS(t)
 	if !ok {
-		return
+		log.Warn("Artifact not found. Please check if the artifact you are trying to yank exists.")
+		return false
 	}
+	return true
+}
+
+func doYankGCS(t GenerateSignedURLsResponse) (ok bool) {
 	if len(t.Urls) == 1 {
 		if ok = httputil.DeleteURL(t.Urls[0].URL); !ok {
-			return
+			return false
 		}
 	} else {
 		for _, u := range t.Urls {
 			if ok = httputil.DeleteURL(u.URL); !ok {
-				return
+				return false
 			}
 		}
 	}
