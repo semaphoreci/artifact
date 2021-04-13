@@ -28,11 +28,11 @@ func RetryOnFailure(msg string, toRun func() bool) (ok bool) {
 			return
 		}
 		if i == 0 {
-			log.Warn(fmt.Sprintf("Failed to %s, retrying...", msg), zap.Int("max retries", RetryLimit))
+			log.VerboseError(fmt.Sprintf("Failed to %s, retrying...", msg))
 		}
 		time.Sleep(timeout * time.Millisecond)
 		timeout += addTimeout
 	}
-	log.Error("Repeatedly failed to "+msg, zap.Int("retry number", RetryLimit))
+	log.VerboseError("Repeatedly failed to "+msg, zap.Int("retry number", RetryLimit))
 	return
 }

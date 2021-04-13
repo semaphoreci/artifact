@@ -24,7 +24,7 @@ func formatIfErr(s int, descr, u string, r io.Reader) (ok bool) {
 	}
 	content, err := ioutil.ReadAll(r)
 	if err != nil {
-		log.Error("Failed to read http response", zap.Error(err),
+		log.VerboseError("Failed to read http response", zap.Error(err),
 			zap.String("while doing", descr), zap.String("url", u))
 		return
 	}
@@ -38,7 +38,7 @@ func formatIfErr(s int, descr, u string, r io.Reader) (ok bool) {
 func do(descr, u, method string, content io.Reader) (ok bool) {
 	req, err := http.NewRequest(http.MethodPut, u, content)
 	if err != nil {
-		log.Error("Failed to create new http request", zap.Error(err),
+		log.VerboseError("Failed to create new http request", zap.Error(err),
 			zap.String("while doing", descr), zap.String("url", u))
 		return
 	}
@@ -56,7 +56,7 @@ func UploadReader(u string, content io.Reader) (ok bool) {
 func DownloadWriter(u string, w io.Writer) (ok bool) {
 	resp, err := http.Get(u)
 	if err != nil {
-		log.Error("Failed to http get", zap.Error(err),
+		log.VerboseError("Failed to http get", zap.Error(err),
 			zap.String("while doing", "Download"), zap.String("url", u))
 		return
 	}
@@ -65,7 +65,7 @@ func DownloadWriter(u string, w io.Writer) (ok bool) {
 		return
 	}
 	if _, err = io.Copy(w, resp.Body); err != nil {
-		log.Error("Failed to read http response", zap.Error(err),
+		log.VerboseError("Failed to read http response", zap.Error(err),
 			zap.String("while doing", "Download"), zap.String("url", u))
 		return
 	}
@@ -82,7 +82,7 @@ func DeleteURL(u string) (ok bool) {
 func CheckURL(u string) (exist bool, ok bool) {
 	resp, err := http.Head(u)
 	if err != nil {
-		log.Error("HEAD error", zap.String("URL", u))
+		log.VerboseError("HEAD error", zap.String("URL", u))
 		return false, false
 	}
 	defer resp.Body.Close()
