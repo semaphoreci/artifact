@@ -13,7 +13,7 @@
 
 ## Use-cases
 
-1. Arhiving artifacts - storing final deliverables
+1. Archiving artifacts - storing final deliverables
 2. Promoting artifacts though pipeline and workflow
 3. Debugging - Store and inspect logs, screenshots and other debug data through UI or CLI
 
