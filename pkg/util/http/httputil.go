@@ -34,47 +34,48 @@ func formatIfErr(s int, descr, u string, r io.Reader) (ok bool) {
 	return
 }
 
-// do is a shortener for http methods that can't be accessed directly in Go.
-func do(descr, u, method string, content io.Reader) (ok bool) {
-	req, err := http.NewRequest(http.MethodPut, u, content)
+// do does httpclient.Do with the given paramters. If getBody is true, the response body
+// is returned, and the responsability of closing it is transferred.
+func do(descr, u, method string, content io.Reader, getBody bool) (ok bool, body io.ReadCloser) {
+	req, err := http.NewRequest(method, u, content)
 	if err != nil {
 		log.VerboseError("Failed to create new http request", zap.Error(err),
 			zap.String("while doing", descr), zap.String("url", u))
 		return
 	}
 	res, err := httpClient.Do(req)
-	defer res.Body.Close()
-	return formatIfErr(res.StatusCode, method, u, res.Body)
+	if !getBody {
+		defer res.Body.Close()
+		return formatIfErr(res.StatusCode, method, u, res.Body), nil
+	}
+	return formatIfErr(res.StatusCode, method, u, res.Body), res.Body
 }
 
 // UploadReader uploads content to the given signed URL.
 func UploadReader(u string, content io.Reader) (ok bool) {
-	return do("Upload", u, http.MethodPut, content)
+	ok, _ = do("Upload", u, http.MethodPut, content, false)
+	return
 }
 
 // DownloadWriter downloads content from the given signed URL to the given io Writer.
-func DownloadWriter(u string, w io.Writer) (ok bool) {
-	resp, err := http.Get(u)
-	if err != nil {
-		log.VerboseError("Failed to http get", zap.Error(err),
-			zap.String("while doing", "Download"), zap.String("url", u))
-		return
+func DownloadWriter(u string, w io.Writer) bool {
+	ok, body := do("Download", u, http.MethodGet, nil, true)
+	defer body.Close()
+	if !ok {
+		return false
 	}
-	defer resp.Body.Close()
-	if ok = formatIfErr(resp.StatusCode, "Download", u, resp.Body); !ok {
-		return
-	}
-	if _, err = io.Copy(w, resp.Body); err != nil {
+	if _, err := io.Copy(w, body); err != nil {
 		log.VerboseError("Failed to read http response", zap.Error(err),
 			zap.String("while doing", "Download"), zap.String("url", u))
-		return
+		return false
 	}
 	return true
 }
 
 // DeleteURL deletes the target of the given signed URL.
 func DeleteURL(u string) (ok bool) {
-	return do("Delete", u, http.MethodDelete, nil)
+	ok, _ = do("Delete", u, http.MethodDelete, nil, false)
+	return
 }
 
 // CheckURL checks if the given signed URL exists by a HEAD http request. Non-existance
