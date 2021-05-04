@@ -44,7 +44,7 @@ func do(descr, u, method string, content io.Reader) (ok bool) {
 	}
 	res, err := httpClient.Do(req)
 	defer res.Body.Close()
-	return formatIfErr(res.StatusCode, "Upload", u, res.Body)
+	return formatIfErr(res.StatusCode, method, u, res.Body)
 }
 
 // UploadReader uploads content to the given signed URL.
