@@ -443,8 +443,9 @@ func PullFileGCS(dstFilename, u string, force bool) (ok bool) {
 // Path becomes a category prefixed path to the GCS Bucket.
 func YankPath(f string) string {
 	newF := pathutil.ToRelative(f)
+	newF = pathutil.PrefixedPath(newF)
 	log.Debug("YankPath", zap.String("input file", f), zap.String("output file", newF))
-	return pathutil.PrefixedPath(newF)
+	return newF
 }
 
 // YankGCS deletes a file or directory from the Google Cloud Storage.
