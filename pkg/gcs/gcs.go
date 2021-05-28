@@ -27,6 +27,7 @@ const (
 	randPostfixLen = 6
 	randChars      = "abcdefghijklmnopqrstuvwxyz0123456789"
 	gatewayAPIBase = "/api/v1/artifacts"
+	batchSize      = 1500
 )
 
 var (
@@ -290,33 +291,61 @@ func PushGCS(dst, src, expires string, force bool) (ok bool) {
 		rps = append(rps, CreateExpireFileName(expTime))
 	}
 
-	request := &GenerateSignedURLsRequest{Paths: rps}
+	request := &GenerateSignedURLsRequest{}
 	if force {
 		request.Type = generateSignedURLsRequestPUSHFORCE
 	} else {
 		request.Type = generateSignedURLsRequestPUSH
 	}
+	// index is the batch start, endIndex is the batch end, except it's the last one
+	// and we want an expire at the end, then we request that too
+	var index, endIndex, endCountIndex int
 	var t GenerateSignedURLsResponse
-	ok = errutil.RetryOnFailure("get push signed URL", func() bool {
-		return handleHTTPReq(request, &t)
-	})
-	ok = ok && doPushGCS(dst, force, expTime, count, rps, lps, t)
-	if !ok {
-		log.Error("File or dir not found. Please check if the source you are trying to push exists.")
-		return false
+	for index = 0; index < count; index += batchSize {
+		endIndex = index + batchSize
+		endCountIndex = endIndex
+		if endIndex > count {
+			endIndex = count
+			if expTime > 0 {
+				endCountIndex = endIndex + 1
+			} else {
+				endCountIndex = endIndex
+			}
+		}
+		request.Paths = rps[index:endCountIndex]
+		ok = errutil.RetryOnFailure("get push signed URL", func() bool {
+			return handleHTTPReq(request, &t)
+		})
+		ok = ok && doPushGCS(dst, force, expTime, rps[index:endIndex],
+			lps[index:endIndex], t)
+		if !ok {
+			log.Error("File or dir not found. Please check if the source you are trying to push exists.")
+			return false
+		}
 	}
+
+	if expTime > 0 {
+		if !force {
+			count = count*2 + 1
+		}
+		// the last response has the expire at the end
+		if ok = httputil.UploadReader(t.Urls[count].URL, strings.NewReader(dst)); !ok {
+			return false
+		}
+	}
+
 	return true
 }
 
 // doPushGCS does the file or directory uploading from the file system to
 // Google Cloud Storage with the given expire if set. Returns if it was a success,
 // otherwise the error has been logged.
-func doPushGCS(dst string, force bool, expTime time.Duration, count int, rps, lps []string,
+func doPushGCS(dst string, force bool, expTime time.Duration, rps, lps []string,
 	t GenerateSignedURLsResponse) (ok bool) {
 	us := t.Urls
 	j := 0
 	exist := false
-	for i := 0; i < count; i, j = i+1, j+1 { // uploading files
+	for i, rp := range rps { // uploading files
 		if !force { // needs to be checked if nothing exists there
 			if exist, ok = httputil.CheckURL(us[j].URL); !ok {
 				return
@@ -328,19 +357,11 @@ func doPushGCS(dst string, force bool, expTime time.Duration, count int, rps, lp
 			j++
 		}
 		log.Debug("Uploading...", zap.String("source", lps[i]),
-			zap.String("destination", rps[i]))
+			zap.String("destination", rp))
 		if ok = UploadFile(us[j].URL, lps[i]); !ok {
 			return
 		}
-	}
-
-	if expTime > 0 {
-		if !force {
-			count = count*2 + 1
-		}
-		if ok = httputil.UploadReader(us[count].URL, strings.NewReader(dst)); !ok {
-			return
-		}
+		j++
 	}
 
 	return true
@@ -380,14 +401,23 @@ func PullGCS(dst, src string, force bool) (ok bool) {
 		zap.Bool("force", force))
 	ps := []string{src}
 	var t GenerateSignedURLsResponse
-	request := &GenerateSignedURLsRequest{Paths: ps, Type: generateSignedURLsRequestPULL}
-	ok = errutil.RetryOnFailure("get pull signed URL", func() bool {
-		return handleHTTPReq(request, &t)
-	})
-	ok = ok && doPullGCS(dst, src, force, t)
-	if !ok {
-		log.Error("Artifact not found. Please check if the artifact you are trying to pull exists.")
-		return false
+	request := &GenerateSignedURLsRequest{Type: generateSignedURLsRequestPULL}
+	// index is the batch start, endIndex is the batch end
+	var index, endIndex int
+	for index = 0; index < len(ps); index += batchSize {
+		endIndex = index + batchSize
+		if endIndex > len(ps) {
+			endIndex = len(ps)
+		}
+		request.Paths = ps[index:endIndex]
+		ok = errutil.RetryOnFailure("get pull signed URL", func() bool {
+			return handleHTTPReq(request, &t)
+		})
+		ok = ok && doPullGCS(dst, src, force, t)
+		if !ok {
+			log.Error("Artifact not found. Please check if the artifact you are trying to pull exists.")
+			return false
+		}
 	}
 	return true
 }
@@ -452,14 +482,23 @@ func YankPath(f string) string {
 func YankGCS(name string) (ok bool) {
 	ps := []string{name}
 	var t GenerateSignedURLsResponse
-	request := &GenerateSignedURLsRequest{Paths: ps, Type: generateSignedURLsRequestYANK}
-	ok = errutil.RetryOnFailure("get yank signed URL", func() bool {
-		return handleHTTPReq(request, &t)
-	})
-	ok = ok && doYankGCS(t)
-	if !ok {
-		log.Warn("Artifact not found. Please check if the artifact you are trying to yank exists.")
-		return false
+	request := &GenerateSignedURLsRequest{Type: generateSignedURLsRequestYANK}
+	// index is the batch start, endIndex is the batch end
+	var index, endIndex int
+	for index = 0; index < len(ps); index += batchSize {
+		endIndex = index + batchSize
+		if endIndex > len(ps) {
+			endIndex = len(ps)
+		}
+		request.Paths = ps[index:endIndex]
+		ok = errutil.RetryOnFailure("get yank signed URL", func() bool {
+			return handleHTTPReq(request, &t)
+		})
+		ok = ok && doYankGCS(t)
+		if !ok {
+			log.Warn("Artifact not found. Please check if the artifact you are trying to yank exists.")
+			return false
+		}
 	}
 	return true
 }
