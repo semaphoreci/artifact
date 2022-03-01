@@ -112,7 +112,8 @@ func init() {
 	PushWorkflowCmd.Flags().BoolP("force", "f", false, desc)
 	PushProjectCmd.Flags().BoolP("force", "f", false, desc)
 
-	desc = `Removes the files after the given amount of time.
+	desc = `(OBSOLETE) Removes the files after the given amount of time.
+
 Nd for N days
 Nw for N weeks
 Nm for N months
