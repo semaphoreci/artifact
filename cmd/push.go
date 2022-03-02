@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/semaphoreci/artifact/pkg/gcs"
@@ -8,7 +9,6 @@ import (
 	"github.com/semaphoreci/artifact/pkg/util/log"
 	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -20,8 +20,7 @@ var pushCmd = &cobra.Command{
 while the rest of the semaphore process, or after it.`,
 }
 
-func runPushForCategory(cmd *cobra.Command, args []string, category, catID,
-	expireDefault string) (string, string) {
+func runPushForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
 	err := pathutil.InitPathID(category, catID)
 	errutil.Check(err)
 	src := args[0]
@@ -34,15 +33,23 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID,
 
 	expireIn, err := cmd.Flags().GetString("expire-in")
 	errutil.Check(err)
-	if len(expireIn) == 0 {
-		expireIn = expireDefault
+	if len(expireIn) != 0 {
+		displayWarningThatExpireInIsNoLongerSupported()
 	}
 
 	dst, src = gcs.PushPaths(dst, src)
-	if ok := gcs.PushGCS(dst, src, expireIn, force); !ok {
+	if ok := gcs.PushGCS(dst, src, force); !ok {
 		os.Exit(1) // error already logged
 	}
 	return dst, src
+}
+
+func displayWarningThatExpireInIsNoLongerSupported() {
+	fmt.Println("")
+	fmt.Println("WARNING: The --expire-in flag is obsolete and will have no efffect.")
+	fmt.Println("Use artifact retention policies to control the lifetime of artifacts.")
+	fmt.Println("Docs: https://docs.semaphoreci.com/essentials/artifacts/#artifact-retention-policies")
+	fmt.Println("")
 }
 
 // PushJobCmd is the subcommand for "artifact push job ..."
@@ -55,10 +62,8 @@ var PushJobCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("job-id")
 		errutil.Check(err)
-		dst, src := runPushForCategory(cmd, args, pathutil.JOB, catID,
-			viper.GetString("JobArtifactsExpire"))
-		log.Info("successful push for current job", zap.String("source", src),
-			zap.String("destination", dst))
+		dst, src := runPushForCategory(cmd, args, pathutil.JOB, catID)
+		log.Info("successful push for current job", zap.String("source", src), zap.String("destination", dst))
 	},
 }
 
@@ -72,8 +77,7 @@ var PushWorkflowCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("workflow-id")
 		errutil.Check(err)
-		dst, src := runPushForCategory(cmd, args, pathutil.WORKFLOW, catID,
-			viper.GetString("WorkflowArtifactsExpire"))
+		dst, src := runPushForCategory(cmd, args, pathutil.WORKFLOW, catID)
 		log.Info("successful push for current workflow", zap.String("source", src),
 			zap.String("destination", dst))
 	},
@@ -89,8 +93,7 @@ var PushProjectCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("project-id")
 		errutil.Check(err)
-		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, catID,
-			viper.GetString("ProjectArtifactsExpire"))
+		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, catID)
 		log.Info("successful push for current project", zap.String("source", src),
 			zap.String("destination", dst))
 	},
@@ -112,12 +115,16 @@ func init() {
 	PushWorkflowCmd.Flags().BoolP("force", "f", false, desc)
 	PushProjectCmd.Flags().BoolP("force", "f", false, desc)
 
-	desc = `(OBSOLETE) Removes the files after the given amount of time.
+	desc = `removes the files after the given amount of time.
 
-Nd for N days
-Nw for N weeks
-Nm for N months
-Ny for N years
+  - Nd for N days
+  - Nw for N weeks
+  - Nm for N months
+  - Ny for N years
+
+WARNING: This is an obsolete flag and has no effect.
+Set up a retention policy in your project instead.
+Docs: https://docs.semaphoreci.com/essentials/artifacts/#artifact-retention-policies.
 `
 	PushJobCmd.Flags().StringP("expire-in", "e", "", desc)
 	PushWorkflowCmd.Flags().StringP("expire-in", "e", "", desc)

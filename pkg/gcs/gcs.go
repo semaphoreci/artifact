@@ -11,13 +11,11 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
 	httputil "github.com/semaphoreci/artifact/pkg/util/http"
-	humeutil "github.com/semaphoreci/artifact/pkg/util/hume"
 	"github.com/semaphoreci/artifact/pkg/util/log"
 	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
 	"go.uber.org/zap"
@@ -195,29 +193,6 @@ func randomString() string {
 	return string(output)
 }
 
-// CreateExpireFileName creates a new name for an expire descriptor file on the
-// Google Cloud Storage.
-func CreateExpireFileName(expTime time.Duration) string {
-	if expTime < 1 {
-		return ""
-	}
-
-	randPostfix := randomString()
-	if len(randPostfix) == 0 {
-		return ""
-	}
-	expFilename := strconv.FormatInt(time.Now().Add(expTime).Unix(), 10)
-	var b strings.Builder
-	expFilename = path.Join(pathutil.ExpirePrefix, expFilename)
-	b.WriteString(expFilename)
-	b.WriteByte('-')
-	b.WriteString(randPostfix)
-	expFilename = b.String()
-	log.Debug("CreateExpireFileName succeeded", zap.Duration("expire time", expTime),
-		zap.String("result", expFilename))
-	return expFilename
-}
-
 // UploadFile uploads a file given by its filename to the Google Cloud Storage.
 func UploadFile(u, filename string) (ok bool) {
 	f, err := os.Open(filename)
@@ -244,15 +219,9 @@ func PushPaths(dst, src string) (string, string) {
 }
 
 // PushGCS uploads a file or directory from the file system to Google Cloud Storage to
-// given destination with a human readable expire string. Returns if it was a success,
-// otherwise the error has been logged.
-func PushGCS(dst, src, expires string, force bool) (ok bool) {
-	log.Debug("pushing...", zap.String("source", src), zap.String("destination", dst),
-		zap.Bool("force", force))
-	expTime := humeutil.ParseRelativeAgeForHumans(expires)
-	if expTime == 0 {
-		return false
-	}
+// given destination. Returns if it was a success, otherwise the error has been logged.
+func PushGCS(dst, src string, force bool) (ok bool) {
+	log.Debug("pushing...", zap.String("source", src), zap.String("destination", dst), zap.Bool("force", force))
 
 	var isF bool
 	if isF, ok = isFileSrc(src); !ok {
@@ -285,10 +254,7 @@ func PushGCS(dst, src, expires string, force bool) (ok bool) {
 			return false
 		}
 	}
-	count := len(rps) // uploading files until this, expire file works differently
-	if expTime > 0 {
-		rps = append(rps, CreateExpireFileName(expTime))
-	}
+	count := len(rps)
 
 	request := &GenerateSignedURLsRequest{Paths: rps}
 	if force {
@@ -300,7 +266,7 @@ func PushGCS(dst, src, expires string, force bool) (ok bool) {
 	ok = errutil.RetryOnFailure("get push signed URL", func() bool {
 		return handleHTTPReq(request, &t)
 	})
-	ok = ok && doPushGCS(dst, force, expTime, count, rps, lps, t)
+	ok = ok && doPushGCS(dst, force, count, rps, lps, t)
 	if !ok {
 		log.Error("File or dir not found. Please check if the source you are trying to push exists.")
 		return false
@@ -309,10 +275,8 @@ func PushGCS(dst, src, expires string, force bool) (ok bool) {
 }
 
 // doPushGCS does the file or directory uploading from the file system to
-// Google Cloud Storage with the given expire if set. Returns if it was a success,
-// otherwise the error has been logged.
-func doPushGCS(dst string, force bool, expTime time.Duration, count int, rps, lps []string,
-	t GenerateSignedURLsResponse) (ok bool) {
+// Google Cloud Storage. Returns if it was a success, otherwise the error has been logged.
+func doPushGCS(dst string, force bool, count int, rps, lps []string, t GenerateSignedURLsResponse) (ok bool) {
 	us := t.Urls
 	j := 0
 	exist := false
@@ -327,18 +291,10 @@ func doPushGCS(dst string, force bool, expTime time.Duration, count int, rps, lp
 			}
 			j++
 		}
-		log.Debug("Uploading...", zap.String("source", lps[i]),
-			zap.String("destination", rps[i]))
-		if ok = UploadFile(us[j].URL, lps[i]); !ok {
-			return
-		}
-	}
 
-	if expTime > 0 {
-		if !force {
-			count = count*2 + 1
-		}
-		if ok = httputil.UploadReader(us[count].URL, strings.NewReader(dst)); !ok {
+		log.Debug("Uploading...", zap.String("source", lps[i]), zap.String("destination", rps[i]))
+
+		if ok = UploadFile(us[j].URL, lps[i]); !ok {
 			return
 		}
 	}
