@@ -36,14 +36,23 @@ func formatIfErr(s int, descr, u string, r io.Reader) (ok bool) {
 
 // do does httpclient.Do with the given paramters. If getBody is true, the response body
 // is returned, and the responsability of closing it is transferred.
-func do(descr, u, method string, content io.Reader, getBody bool) (ok bool, body io.ReadCloser) {
+func do(descr, u, method string, content io.Reader, size int64, getBody bool) (ok bool, body io.ReadCloser) {
 	req, err := http.NewRequest(method, u, content)
 	if err != nil {
 		log.VerboseError("Failed to create new http request", zap.Error(err),
 			zap.String("while doing", descr), zap.String("url", u))
 		return
 	}
+
+	req.ContentLength = size
+
 	res, err := httpClient.Do(req)
+	if err != nil {
+		log.VerboseError("Failed to execute http request", zap.Error(err),
+			zap.String("while doing", descr), zap.String("url", u))
+		return
+	}
+
 	if !getBody {
 		defer res.Body.Close()
 		return formatIfErr(res.StatusCode, method, u, res.Body), nil
@@ -52,14 +61,14 @@ func do(descr, u, method string, content io.Reader, getBody bool) (ok bool, body
 }
 
 // UploadReader uploads content to the given signed URL.
-func UploadReader(u string, content io.Reader) (ok bool) {
-	ok, _ = do("Upload", u, http.MethodPut, content, false)
+func UploadReader(u string, content io.Reader, size int64) (ok bool) {
+	ok, _ = do("Upload", u, http.MethodPut, content, size, false)
 	return
 }
 
 // DownloadWriter downloads content from the given signed URL to the given io Writer.
 func DownloadWriter(u string, w io.Writer) bool {
-	ok, body := do("Download", u, http.MethodGet, nil, true)
+	ok, body := do("Download", u, http.MethodGet, nil, 0, true)
 	defer body.Close()
 	if !ok {
 		return false
@@ -74,7 +83,7 @@ func DownloadWriter(u string, w io.Writer) bool {
 
 // DeleteURL deletes the target of the given signed URL.
 func DeleteURL(u string) (ok bool) {
-	ok, _ = do("Delete", u, http.MethodDelete, nil, false)
+	ok, _ = do("Delete", u, http.MethodDelete, nil, 0, false)
 	return
 }
 
