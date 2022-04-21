@@ -38,8 +38,9 @@ func TestHTTPMethod(t *testing.T) {
 	u := "example.com"
 	content := "some content"
 	cr := strings.NewReader(content)
+	contentSize := int64(len(content))
 
-	check := func(method string, cr io.Reader, getBody bool) {
+	check := func(method string, cr io.Reader, contentSize int64, getBody bool) {
 		httpmock.ActivateNonDefault(httpClient)
 		defer httpmock.DeactivateAndReset()
 		httpmock.RegisterResponder(method, u,
@@ -54,7 +55,7 @@ func TestHTTPMethod(t *testing.T) {
 				return httpmock.NewStringResponse(200, ""), nil
 			},
 		)
-		ok, body := do(descr, u, method, cr, getBody)
+		ok, body := do(descr, u, method, cr, contentSize, getBody)
 		assert.True(t, ok, "should be fine but fails")
 		if getBody {
 			defer body.Close()
@@ -64,7 +65,7 @@ func TestHTTPMethod(t *testing.T) {
 		}
 	}
 
-	check(http.MethodGet, cr, true)
-	check(http.MethodPut, cr, false)
-	check(http.MethodDelete, nil, false)
+	check(http.MethodGet, cr, 0, true)
+	check(http.MethodPut, cr, contentSize, false)
+	check(http.MethodDelete, nil, 0, false)
 }
