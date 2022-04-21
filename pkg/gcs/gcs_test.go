@@ -310,3 +310,36 @@ func TestCutPrefixByDelimMulti(t *testing.T) {
 	check("/", "", '/', 3)
 	check("", "", '/', 3)
 }
+
+func TestParseURL(t *testing.T) {
+	t.Run("GCS URL", func(t *testing.T) {
+		assert.Equal(t,
+			"artifacts/project/projectid/myfile.txt",
+			ParseURL("https://storage.googleapis.com/my-bucket1/artifacts/project/projectid/myfile.txt?Expires=231256754712"),
+		)
+
+		assert.Equal(t,
+			"artifacts/project/projectid/mydir/myfile.txt",
+			ParseURL("https://storage.googleapis.com/my-bucket1/artifacts/project/projectid/mydir/myfile.txt?Expires=231256754712"),
+		)
+	})
+
+	t.Run("S3 URL", func(t *testing.T) {
+		assert.Equal(t,
+			"artifacts/project/projectid/myfile.txt",
+			ParseURL("https://my-bucket1.s3.us-east-1.amazonaws.com/projectid/artifacts/project/projectid/myfile.txt?X-Amz-Whatever"),
+		)
+
+		assert.Equal(t,
+			"artifacts/project/projectid/mydir/myfile.txt",
+			ParseURL("https://my-bucket1.s3.us-east-1.amazonaws.com/projectid/artifacts/project/projectid/mydir/myfile.txt?X-Amz-Whatever"),
+		)
+	})
+
+	t.Run("URL not recognized", func(t *testing.T) {
+		assert.Equal(t,
+			"",
+			ParseURL("https://somehost.com/projectid/artifacts/project/projectid/myfile.txt"),
+		)
+	})
+}

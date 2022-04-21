@@ -94,6 +94,8 @@ func isFileSrc(src string) (isF bool, ok bool) {
 // ParseURL parses object path from a signed URL.
 func ParseURL(u string) string {
 	if strings.HasPrefix(u, "https://storage.googleapis.com") {
+		log.Debug("Parsing GCS URL", zap.String("url", u))
+
 		// GCS URLs follow the format 'https://storage.googleapis.com/<bucket-name>/<path>'
 		re := regexp.MustCompile(`https:\/\/storage\.googleapis\.com\/[a-z0-9\-]+\/([^?]+)\?Expires=`)
 		parsed := re.FindStringSubmatch(u)
@@ -101,18 +103,21 @@ func ParseURL(u string) string {
 			log.Warn("ParseURL fails to parse", zap.String("url", u))
 			return ""
 		}
+
 		return parsed[1]
-	} else {
-		// S3 URLs follow the format 'https://<bucket-name>.s3.<region>.amazonaws.com/<path>'
-		// Note: S3 URLs use the project id as a prefix, so we take that into account here as well
-		re := regexp.MustCompile(`https:\/\/(.+)\.s3\.(.+)\.amazonaws\.com\/[a-z0-9\-]+\/([^?]+)\?`)
-		parsed := re.FindStringSubmatch(u)
-		if len(parsed) < 4 {
-			log.Warn("ParseURL fails to parse", zap.String("url", u))
-			return ""
-		}
-		return parsed[3]
 	}
+
+	log.Debug("Parsing S3 URL", zap.String("url", u))
+
+	// S3 URLs follow the format 'https://<bucket-name>.s3.<region>.amazonaws.com/<path>'
+	// Note: S3 URLs use the project id as a prefix, so we take that into account here as well
+	re := regexp.MustCompile(`https:\/\/(.+)\.s3\.(.+)\.amazonaws\.com\/[a-z0-9\-]+\/([^?]+)\?`)
+	parsed := re.FindStringSubmatch(u)
+	if len(parsed) < 4 {
+		log.Warn("ParseURL fails to parse", zap.String("url", u))
+		return ""
+	}
+	return parsed[3]
 }
 
 // SignedURL contains an url and its method type.
