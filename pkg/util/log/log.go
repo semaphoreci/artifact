@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path"
 
 	"go.uber.org/zap"
 )
@@ -11,14 +13,14 @@ import (
 var (
 	verbose bool
 	// def is the global logger.
-	def = Logger{zap.NewNop()}
+	def     = Logger{zap.NewNop()}
+	logFile = path.Join(os.TempDir(), "artifacts.log")
 )
 
 type key int
 
 const (
-	logKey  key = iota
-	logFile     = "/tmp/artifacts.log"
+	logKey key = iota
 )
 
 // Init initializes logging, based on we want verbose, or simple logs. Nonverbose logs go to a
