@@ -5,16 +5,19 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"go.uber.org/zap"
 )
 
 var (
 	verbose bool
+	logFile = findLogFileName()
+
 	// def is the global logger.
-	def     = Logger{zap.NewNop()}
-	logFile = path.Join(os.TempDir(), "artifacts.log")
+	def = Logger{zap.NewNop()}
 )
 
 type key int
@@ -135,4 +138,16 @@ func VerboseError(msg string, fields ...zap.Field) {
 // Panic writes a panic level log with the default logger, and then panics.
 func Panic(msg string, fields ...zap.Field) {
 	def.Panic(msg, fields...)
+}
+
+func findLogFileName() string {
+	if runtime.GOOS == "windows" {
+		path := filepath.Join(os.TempDir(), "artifacts.log")
+
+		// Zap does not accept paths with a volume, so we remove it
+		// See: https://github.com/uber-go/zap/issues/621
+		return strings.ReplaceAll(path, filepath.VolumeName(path), "")
+	}
+
+	return "/tmp/artifacts.log"
 }

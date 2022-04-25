@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/semaphoreci/artifact/pkg/gcs"
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
@@ -37,7 +38,7 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID strin
 		displayWarningThatExpireInIsNoLongerSupported()
 	}
 
-	dst, src = gcs.PushPaths(dst, src)
+	dst, src = gcs.PushPaths(filepath.ToSlash(dst), filepath.ToSlash(src))
 	if ok := gcs.PushGCS(dst, src, force); !ok {
 		os.Exit(1) // error already logged
 	}
