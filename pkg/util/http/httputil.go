@@ -41,7 +41,7 @@ func do(descr, u, method string, content io.Reader, size int64, getBody bool) (o
 
 	// If the file has no bytes, we need to use http.NoBody
 	// See https://cs.opensource.google/go/go/+/refs/tags/go1.18.2:src/net/http/request.go;l=920
-	if size == 0 {
+	if method == http.MethodPut && size == 0 {
 		contentBody = http.NoBody
 	}
 
