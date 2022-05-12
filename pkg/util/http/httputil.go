@@ -37,7 +37,15 @@ func formatIfErr(s int, descr, u string, r io.Reader) (ok bool) {
 // do does httpclient.Do with the given paramters. If getBody is true, the response body
 // is returned, and the responsability of closing it is transferred.
 func do(descr, u, method string, content io.Reader, size int64, getBody bool) (ok bool, body io.ReadCloser) {
-	req, err := http.NewRequest(method, u, content)
+	contentBody := content
+
+	// If the file has no bytes, we need to use http.NoBody
+	// See https://cs.opensource.google/go/go/+/refs/tags/go1.18.2:src/net/http/request.go;l=920
+	if size == 0 {
+		contentBody = http.NoBody
+	}
+
+	req, err := http.NewRequest(method, u, contentBody)
 	if err != nil {
 		log.VerboseError("Failed to create new http request", zap.Error(err),
 			zap.String("while doing", descr), zap.String("url", u))
