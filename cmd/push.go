@@ -167,28 +167,35 @@ func saveStdinToTempFile() (string, error) {
 	}
 
 	r := bufio.NewReader(os.Stdin)
-	buf := make([]byte, 0, 8)
+	buf := make([]byte, 0, 4*1024)
 
 	for {
 		nRead, err := r.Read(buf[:cap(buf)])
 		buf = buf[:nRead]
 
-		// nothing was read and no error was thrown, so just try again
-		if nRead == 0 && err == nil {
-			continue
-		}
+		if nRead == 0 {
+			// nothing was read and no error was thrown, so just try again
+			if err == nil {
+				continue
+			}
 
-		// there's nothing more to read
-		if err == io.EOF {
-			break
-		}
+			// there's nothing more to read
+			if err == io.EOF {
+				break
+			}
 
-		// Something went wrong when reading
-		if err != nil {
+			// nothing was read and we had an error
 			log.Error("Error reading stdin", zap.Error(err))
 			return "", err
 		}
 
+		// something was read, but we still got an error
+		if err != nil && err != io.EOF {
+			log.Error("Error reading stdin", zap.Error(err))
+			return "", err
+		}
+
+		// no errors when reading from stdin, just write it to the temporary file
 		_, err = tmpFile.Write(buf)
 		if err != nil {
 			log.Error("Error writing to temp file", zap.Error(err))
