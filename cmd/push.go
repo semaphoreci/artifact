@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -24,7 +27,9 @@ while the rest of the semaphore process, or after it.`,
 func runPushForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
 	err := pathutil.InitPathID(category, catID)
 	errutil.Check(err)
-	src := args[0]
+
+	src, err := getSrc(cmd, args)
+	errutil.Check(err)
 
 	dst, err := cmd.Flags().GetString("destination")
 	errutil.Check(err)
@@ -134,4 +139,69 @@ Docs: https://docs.semaphoreci.com/essentials/artifacts/#artifact-retention-poli
 	PushJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
 	PushWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
 	PushProjectCmd.Flags().StringP("project-id", "p", "", "set explicit project id")
+}
+
+func getSrc(cmd *cobra.Command, args []string) (string, error) {
+	if shouldUseStdin() {
+		log.Debug("Detected stdin, saving it to a temporary file...")
+		return saveStdinToTempFile()
+	}
+
+	return args[0], nil
+}
+
+func shouldUseStdin() bool {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+
+	return (stat.Mode() & os.ModeCharDevice) == 0
+}
+
+func saveStdinToTempFile() (string, error) {
+	tmpFile, err := ioutil.TempFile("", "*")
+	if err != nil {
+		log.Error("Error creating temporary file to read stdin", zap.Error(err))
+		return "", err
+	}
+
+	r := bufio.NewReader(os.Stdin)
+	buf := make([]byte, 0, 4*1024)
+
+	for {
+		nRead, err := r.Read(buf[:cap(buf)])
+		buf = buf[:nRead]
+
+		if nRead == 0 {
+			// nothing was read and no error was thrown, so just try again
+			if err == nil {
+				continue
+			}
+
+			// there's nothing more to read
+			if err == io.EOF {
+				break
+			}
+
+			// nothing was read and we had an error
+			log.Error("Error reading stdin", zap.Error(err))
+			return "", err
+		}
+
+		// something was read, but we still got an error
+		if err != nil && err != io.EOF {
+			log.Error("Error reading stdin", zap.Error(err))
+			return "", err
+		}
+
+		// no errors when reading from stdin, just write it to the temporary file
+		_, err = tmpFile.Write(buf)
+		if err != nil {
+			log.Error("Error writing to temp file", zap.Error(err))
+			return "", err
+		}
+	}
+
+	return tmpFile.Name(), nil
 }
