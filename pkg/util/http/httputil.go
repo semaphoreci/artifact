@@ -98,6 +98,7 @@ func DeleteURL(u string) (ok bool) {
 // CheckURL checks if the given signed URL exists by a HEAD http request. Non-existance
 // doesn't fail with an error.
 func CheckURL(u string) (exist bool, ok bool) {
+	// #nosec
 	resp, err := http.Head(u)
 	if err != nil {
 		log.VerboseError("HEAD error", zap.String("URL", u))

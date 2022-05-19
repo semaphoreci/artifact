@@ -190,35 +190,17 @@ func handleHTTPReq(data interface{}, target *GenerateSignedURLsResponse) (ok boo
 	return true
 }
 
-func randomString() string {
-	output := make([]byte, randPostfixLen)
-	randomness := make([]byte, randPostfixLen)
-
-	// generate some random bytes, this shouldn't fail
-	_, err := rand.Read(randomness)
-	if err != nil {
-		log.Error("Failed to generate random number", zap.Error(err))
-		return ""
-	}
-
-	// fill output
-	l := uint8(len(randChars))
-	for pos := 0; pos < randPostfixLen; pos++ {
-		random := uint8(randomness[pos])   // get random item
-		randomPos := random % uint8(l)     // random % length
-		output[pos] = randChars[randomPos] // put into output
-	}
-	return string(output)
-}
-
 // UploadFile uploads a file given by its filename to the Google Cloud Storage.
 func UploadFile(u, filename string) (ok bool) {
+	// #nosec
 	f, err := os.Open(filename)
 	if err != nil {
 		log.Error("Failed to open file for uploading", zap.String("filename", filename),
 			zap.Error(err))
 		return
 	}
+
+	// #nosec
 	defer f.Close()
 
 	fileInfo, err := f.Stat()
@@ -405,17 +387,22 @@ func PullFileGCS(dstFilename, u string, force bool) (ok bool) {
 			return
 		}
 	}
-	err := os.MkdirAll(filepath.Dir(dstFilename), 0755)
+	err := os.MkdirAll(filepath.Dir(dstFilename), 0750)
 	if err != nil {
 		log.Error("Failed to create dir for pulling from Google Cloud Storage", zap.Error(err))
 		return
 	}
 	var f *os.File
+
+	// #nosec
 	if f, err = os.Create(dstFilename); err != nil {
 		log.Error("Failed to create file for pulling from Google Cloud Storage", zap.Error(err))
 		return
 	}
+
+	// #nosec
 	defer f.Close()
+
 	ok = httputil.DownloadWriter(u, f)
 	log.Debug("PullFileGCS result", zap.Bool("success", ok))
 	return ok

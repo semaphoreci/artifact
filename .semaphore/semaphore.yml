@@ -14,7 +14,7 @@ blocks:
       - name: Unit tests
         commands:
           - checkout
-          - make go.install
+          - sem-version go 1.16
           - "export PATH=/usr/local/go/bin:$PATH"
           - "export GOPATH=~/go"
           - "export GOROOT=/usr/local/go"
@@ -23,6 +23,21 @@ blocks:
           - make go.get
           - make build
           - make test
+
+  - name: "Security checks"
+    task:
+      env_vars:
+        - name: GO111MODULE
+          value: "on"
+      jobs:
+        - name: Check dependencies
+          commands:
+            - checkout
+            - make check.deps
+        - name: Check code
+          commands:
+            - checkout
+            - make check.static
 
 promotions:
   - name: "Release"
