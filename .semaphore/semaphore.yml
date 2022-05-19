@@ -23,14 +23,17 @@ blocks:
     task:
       secrets:
         - name: security-toolbox-shared-read-access
+      prologue:
+        commands:
+          - checkout
+          - mv ~/.ssh/security-toolbox ~/.ssh/id_rsa
+          - sudo chmod 600 ~/.ssh/id_rsa
       jobs:
         - name: Check dependencies
           commands:
-            - checkout
             - make check.deps
         - name: Check code
           commands:
-            - checkout
             - make check.static
 
 promotions:
