@@ -21,9 +21,8 @@ blocks:
 
   - name: "Security checks"
     task:
-      env_vars:
-        - name: GO111MODULE
-          value: "on"
+      secrets:
+        - name: security-toolbox-shared-read-access
       jobs:
         - name: Check dependencies
           commands:
