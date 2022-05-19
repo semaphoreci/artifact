@@ -13,13 +13,8 @@ blocks:
       jobs:
       - name: Unit tests
         commands:
-          - checkout
           - sem-version go 1.16
-          - "export PATH=/usr/local/go/bin:$PATH"
-          - "export GOPATH=~/go"
-          - "export GOROOT=/usr/local/go"
-          - env
-          - go version
+          - checkout
           - make go.get
           - make build
           - make test
