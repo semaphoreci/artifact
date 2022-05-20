@@ -5,14 +5,13 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/semaphoreci/artifact/pkg/util/log"
-	"go.uber.org/zap"
+	log "github.com/sirupsen/logrus"
 )
 
 var httpClient = &http.Client{}
 
 // IsStatusOK checks if the status of the http response is a failure.
-func IsStatusOK(s int) (ok bool) {
+func IsStatusOK(s int) bool {
 	return s >= http.StatusOK && s < http.StatusMultipleChoices
 }
 
@@ -22,15 +21,14 @@ func formatIfErr(s int, descr, u string, r io.Reader) (ok bool) {
 	if ok = IsStatusOK(s); ok {
 		return
 	}
+
 	content, err := ioutil.ReadAll(r)
 	if err != nil {
-		log.VerboseError("Failed to read http response", zap.Error(err),
-			zap.String("while doing", descr), zap.String("url", u))
+		log.Errorf("Failed to read http response: %v", err)
 		return
 	}
-	log.Warn("http status fail", zap.String("while doing", descr), zap.String("url", u),
-		zap.Int("status code", s), zap.String("status", http.StatusText(s)),
-		zap.String("content", string(content)))
+
+	log.Warn("HTTP request to '%s' failed with '%s': %s\n", u, s, string(content))
 	return
 }
 
@@ -47,8 +45,7 @@ func do(descr, u, method string, content io.Reader, size int64, getBody bool) (o
 
 	req, err := http.NewRequest(method, u, contentBody)
 	if err != nil {
-		log.VerboseError("Failed to create new http request", zap.Error(err),
-			zap.String("while doing", descr), zap.String("url", u))
+		log.Errorf("Failed to create new http request: %v\n", err)
 		return
 	}
 
@@ -56,8 +53,7 @@ func do(descr, u, method string, content io.Reader, size int64, getBody bool) (o
 
 	res, err := httpClient.Do(req)
 	if err != nil {
-		log.VerboseError("Failed to execute http request", zap.Error(err),
-			zap.String("while doing", descr), zap.String("url", u))
+		log.Errorf("Failed to execute http request: %v", err)
 		return
 	}
 
@@ -77,15 +73,18 @@ func UploadReader(u string, content io.Reader, size int64) (ok bool) {
 // DownloadWriter downloads content from the given signed URL to the given io Writer.
 func DownloadWriter(u string, w io.Writer) bool {
 	ok, body := do("Download", u, http.MethodGet, nil, 0, true)
+
 	defer body.Close()
+
 	if !ok {
 		return false
 	}
+
 	if _, err := io.Copy(w, body); err != nil {
-		log.VerboseError("Failed to read http response", zap.Error(err),
-			zap.String("while doing", "Download"), zap.String("url", u))
+		log.Errorf("Failed to read http response: %v\n", err)
 		return false
 	}
+
 	return true
 }
 
@@ -98,12 +97,13 @@ func DeleteURL(u string) (ok bool) {
 // CheckURL checks if the given signed URL exists by a HEAD http request. Non-existance
 // doesn't fail with an error.
 func CheckURL(u string) (exist bool, ok bool) {
+	log.Debugf("HEAD '%s'...\n", u)
 	resp, err := http.Head(u)
 	if err != nil {
-		log.VerboseError("HEAD error", zap.String("URL", u))
+		log.Errorf("HEAD error: %v\n", err)
 		return false, false
 	}
-	defer resp.Body.Close()
 
+	defer resp.Body.Close()
 	return IsStatusOK(resp.StatusCode), true
 }

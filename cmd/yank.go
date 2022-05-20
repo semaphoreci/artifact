@@ -4,12 +4,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/semaphoreci/artifact/pkg/gcs"
-	errutil "github.com/semaphoreci/artifact/pkg/util/err"
-	"github.com/semaphoreci/artifact/pkg/util/log"
-	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
+	errutil "github.com/semaphoreci/artifact/pkg/err"
+	"github.com/semaphoreci/artifact/pkg/hub"
+	pathutil "github.com/semaphoreci/artifact/pkg/path"
+	"github.com/semaphoreci/artifact/pkg/storage"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 // yankCmd represents the yank command
@@ -23,14 +23,19 @@ don't need them any more.`,
 }
 
 func runYankForCategory(cmd *cobra.Command, args []string, category, catID string) string {
-	err := pathutil.InitPathID(category, catID)
+	hubClient, err := hub.NewClient()
+	errutil.Check(err)
+
+	err = pathutil.InitPathID(category, catID)
 	errutil.Check(err)
 	name := args[0]
 
-	name = gcs.YankPath(filepath.ToSlash(name))
-	if ok := gcs.YankGCS(name); !ok {
+	name = storage.YankPath(filepath.ToSlash(name))
+	err = storage.Yank(hubClient, name)
+	if err != nil {
 		os.Exit(1) // error already logged
 	}
+
 	return name
 }
 
@@ -45,7 +50,7 @@ var YankJobCmd = &cobra.Command{
 		catID, err := cmd.Flags().GetString("job-id")
 		errutil.Check(err)
 		name := runYankForCategory(cmd, args, pathutil.JOB, catID)
-		log.Info("successful yank for current job", zap.String("name", name))
+		log.Infof("Successfully yanked '%s' from current job artifacts.\n", name)
 	},
 }
 
@@ -60,7 +65,7 @@ var YankWorkflowCmd = &cobra.Command{
 		catID, err := cmd.Flags().GetString("workflow-id")
 		errutil.Check(err)
 		name := runYankForCategory(cmd, args, pathutil.WORKFLOW, catID)
-		log.Info("successful yank for current workflow", zap.String("name", name))
+		log.Infof("Successfully yanked '%s' from current workflow artifacts.\n", name)
 	},
 }
 
@@ -73,7 +78,7 @@ var YankProjectCmd = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		name := runYankForCategory(cmd, args, pathutil.PROJECT, "")
-		log.Info("successful yank for current project", zap.String("name", name))
+		log.Infof("Successfully yanked '%s' from current project artifacts.\n", name)
 	},
 }
 

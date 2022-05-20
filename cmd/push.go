@@ -8,12 +8,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/semaphoreci/artifact/pkg/gcs"
-	errutil "github.com/semaphoreci/artifact/pkg/util/err"
-	"github.com/semaphoreci/artifact/pkg/util/log"
-	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
+	errutil "github.com/semaphoreci/artifact/pkg/err"
+	"github.com/semaphoreci/artifact/pkg/hub"
+	pathutil "github.com/semaphoreci/artifact/pkg/path"
+	"github.com/semaphoreci/artifact/pkg/storage"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 // pushCmd represents the push command
@@ -25,7 +25,10 @@ while the rest of the semaphore process, or after it.`,
 }
 
 func runPushForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
-	err := pathutil.InitPathID(category, catID)
+	hubClient, err := hub.NewClient()
+	errutil.Check(err)
+
+	err = pathutil.InitPathID(category, catID)
 	errutil.Check(err)
 
 	src, err := getSrc(cmd, args)
@@ -43,8 +46,8 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID strin
 		displayWarningThatExpireInIsNoLongerSupported()
 	}
 
-	dst, src = gcs.PushPaths(filepath.ToSlash(dst), filepath.ToSlash(src))
-	if ok := gcs.PushGCS(dst, src, force); !ok {
+	dst, src = storage.PushPaths(filepath.ToSlash(dst), filepath.ToSlash(src))
+	if ok := storage.Push(hubClient, dst, src, force); !ok {
 		os.Exit(1) // error already logged
 	}
 	return dst, src
@@ -69,7 +72,7 @@ var PushJobCmd = &cobra.Command{
 		catID, err := cmd.Flags().GetString("job-id")
 		errutil.Check(err)
 		dst, src := runPushForCategory(cmd, args, pathutil.JOB, catID)
-		log.Info("successful push for current job", zap.String("source", src), zap.String("destination", dst))
+		log.Infof("Successfully pushed '%s' as '%s' for current job.\n", src, dst)
 	},
 }
 
@@ -84,8 +87,7 @@ var PushWorkflowCmd = &cobra.Command{
 		catID, err := cmd.Flags().GetString("workflow-id")
 		errutil.Check(err)
 		dst, src := runPushForCategory(cmd, args, pathutil.WORKFLOW, catID)
-		log.Info("successful push for current workflow", zap.String("source", src),
-			zap.String("destination", dst))
+		log.Infof("Successfully pushed '%s' as '%s' for current workflow.\n", src, dst)
 	},
 }
 
@@ -100,8 +102,7 @@ var PushProjectCmd = &cobra.Command{
 		catID, err := cmd.Flags().GetString("project-id")
 		errutil.Check(err)
 		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, catID)
-		log.Info("successful push for current project", zap.String("source", src),
-			zap.String("destination", dst))
+		log.Infof("Successfully pushed '%s' as '%s' for current project.\n", src, dst)
 	},
 }
 
@@ -162,7 +163,7 @@ func shouldUseStdin() bool {
 func saveStdinToTempFile() (string, error) {
 	tmpFile, err := ioutil.TempFile("", "*")
 	if err != nil {
-		log.Error("Error creating temporary file to read stdin", zap.Error(err))
+		log.Errorf("Error creating temporary file to read stdin: %v\n", err)
 		return "", err
 	}
 
@@ -185,20 +186,20 @@ func saveStdinToTempFile() (string, error) {
 			}
 
 			// nothing was read and we had an error
-			log.Error("Error reading stdin", zap.Error(err))
+			log.Errorf("Error reading stdin: %v\n", err)
 			return "", err
 		}
 
 		// something was read, but we still got an error
 		if err != nil && err != io.EOF {
-			log.Error("Error reading stdin", zap.Error(err))
+			log.Errorf("Error reading stdin: %v\n", err)
 			return "", err
 		}
 
 		// no errors when reading from stdin, just write it to the temporary file
 		_, err = tmpFile.Write(buf)
 		if err != nil {
-			log.Error("Error writing to temp file", zap.Error(err))
+			log.Errorf("Error writing to temp file: %v\n", err)
 			return "", err
 		}
 	}
