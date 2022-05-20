@@ -263,6 +263,7 @@ func PushGCS(dst, src string, force bool) (ok bool) {
 	} else { // directory, getting all filenames
 		rps = []string{}
 		lps = []string{}
+		prefLen := len(src)
 		err := filepath.Walk(src, func(filename string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -270,8 +271,7 @@ func PushGCS(dst, src string, force bool) (ok bool) {
 			if info.IsDir() {
 				return nil
 			}
-
-			rps = append(rps, path.Join(dst, filepath.Base(filename)))
+			rps = append(rps, path.Join(dst, filename[prefLen:]))
 			lps = append(lps, filename)
 			return nil
 		})

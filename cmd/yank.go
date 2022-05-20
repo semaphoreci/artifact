@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/semaphoreci/artifact/pkg/gcs"
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
@@ -27,7 +26,7 @@ func runYankForCategory(cmd *cobra.Command, args []string, category, catID strin
 	errutil.Check(err)
 	name := args[0]
 
-	name = gcs.YankPath(filepath.ToSlash(name))
+	name = gcs.YankPath(name)
 	if ok := gcs.YankGCS(name); !ok {
 		os.Exit(1) // error already logged
 	}

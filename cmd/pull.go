@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/semaphoreci/artifact/pkg/gcs"
 	errutil "github.com/semaphoreci/artifact/pkg/util/err"
@@ -32,7 +31,7 @@ func runPullForCategory(cmd *cobra.Command, args []string, category, catID strin
 	force, err := cmd.Flags().GetBool("force")
 	errutil.Check(err)
 
-	dst, src = gcs.PullPaths(filepath.ToSlash(dst), filepath.ToSlash(src))
+	dst, src = gcs.PullPaths(dst, src)
 	if ok := gcs.PullGCS(dst, src, force); !ok {
 		os.Exit(1) // error already logged
 	}
