@@ -1,10 +1,12 @@
-package pathutil
+package files
 
 import (
 	"fmt"
 	"os"
 	"path"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -34,6 +36,54 @@ var (
 	pluralName string
 )
 
+// Returns source and destination paths to push a file to storage.
+// Source path becomes a relative path on the file system, destination path becomes a category
+// prefixed path storage bucket.
+func PushPaths(dst, src string) (string, string) {
+	newDst := ToRelative(dst)
+	newDst = PrefixedPathFromSource(newDst, src)
+	newSrc := path.Clean(src)
+
+	log.Debugln("Paths for pushing...")
+	log.Debugf("> Input destination: '%s'\n", dst)
+	log.Debugf("> Input source: '%s'\n", src)
+	log.Debugf("> Output destination: '%s'\n", newDst)
+	log.Debugf("> Output source: '%s'\n", newSrc)
+
+	return newDst, newSrc
+}
+
+// PullPaths returns source and destination paths to pull a file from remote storage.
+// Source path becomes a category prefixed path to the storage bucket,
+// destination path becomes a relative path on the file system.
+func PullPaths(dst, src string) (string, string) {
+	newSrc := ToRelative(src)
+	newDst := PathFromSource(dst, newSrc)
+	newSrc = PrefixedPath(newSrc)
+	newDst = path.Clean(newDst)
+
+	log.Debug("Paths for pulling...\n")
+	log.Debugf("> Input destination: %s\n", dst)
+	log.Debugf("> Input source: %s\n", src)
+	log.Debugf("> Output destination: %s\n", newDst)
+	log.Debugf("> Output source: %s\n", newSrc)
+
+	return newDst, newSrc
+}
+
+// Returns path to yank a file from the remote storage.
+// Path becomes a category prefixed path to the storage bucket.
+func YankPath(f string) string {
+	newF := ToRelative(f)
+	newF = PrefixedPath(newF)
+
+	log.Debug("Paths for yanking...\n")
+	log.Debugf("> Input file: %s\n", f)
+	log.Debugf("> Output file: %s\n", newF)
+
+	return newF
+}
+
 // InitPathID initiates path category ID. The default is an empty string, in that case the ID is read
 // from environment variable. Otherwise it comes from command-line argument --job-id or --workflow-id.
 func InitPathID(category, defVal string) error {
@@ -42,10 +92,12 @@ func InitPathID(category, defVal string) error {
 	} else {
 		categoryID = defVal
 	}
+
 	if len(categoryID) == 0 {
-		return fmt.Errorf("Please set %sID with %s env var or related flag", category,
+		return fmt.Errorf("please set %sID with %s env var or related flag", category,
 			CategoryEnv[category])
 	}
+
 	pluralName = pluralCategory[category]
 	return nil
 }
@@ -87,4 +139,47 @@ func ToRelative(filepath string) string {
 	// looking for . on the right side of the cut of left part
 	farLeft := strings.TrimRight(left, ".")
 	return cleaned[len(farLeft):]
+}
+
+// isFile returns if the given path points to a file in the local file system.
+func isFile(filename string) (bool, error) {
+	fi, err := os.Stat(filename)
+	if err == nil {
+		return !fi.IsDir(), nil
+	}
+
+	return false, fmt.Errorf("error finding file '%s': %v", filename, err)
+}
+
+// isDir returns if the given path points to a directory in the local file system.
+func isDir(filename string) (bool, error) {
+	fi, err := os.Stat(filename)
+	if err == nil {
+		return fi.IsDir(), nil
+	}
+
+	return false, fmt.Errorf("error finding directory '%s': %v", filename, err)
+}
+
+// Checks if the given source exists and is a file.
+func IsFileSrc(src string) (bool, error) {
+	isFile, err := isFile(src)
+	if err != nil {
+		return false, err
+	}
+
+	if isFile {
+		return true, nil
+	}
+
+	isDir, err := isDir(src)
+	if err != nil {
+		return false, err
+	}
+
+	if isDir {
+		return false, nil
+	}
+
+	return false, fmt.Errorf("path '%s' doesn't exist", src)
 }

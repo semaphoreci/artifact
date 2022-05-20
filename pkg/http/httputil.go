@@ -1,6 +1,7 @@
 package httputil
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -10,13 +11,11 @@ import (
 
 var httpClient = &http.Client{}
 
-// IsStatusOK checks if the status of the http response is a failure.
 func IsStatusOK(s int) bool {
 	return s >= http.StatusOK && s < http.StatusMultipleChoices
 }
 
-// formatIfErr checks if the http result is okay, logs any errors including
-// wrong status, and content in that case.
+// Logs more information (status, response body) in case of a failed HTTP request.
 func formatIfErr(s int, descr, u string, r io.Reader) (ok bool) {
 	if ok = IsStatusOK(s); ok {
 		return
@@ -64,28 +63,29 @@ func do(descr, u, method string, content io.Reader, size int64, getBody bool) (o
 	return formatIfErr(res.StatusCode, method, u, res.Body), res.Body
 }
 
-// UploadReader uploads content to the given signed URL.
-func UploadReader(u string, content io.Reader, size int64) (ok bool) {
-	ok, _ = do("Upload", u, http.MethodPut, content, size, false)
-	return
+func UploadReader(u string, content io.Reader, size int64) error {
+	ok, _ := do("Upload", u, http.MethodPut, content, size, false)
+	if !ok {
+		return fmt.Errorf("error uploading")
+	}
+
+	return nil
 }
 
-// DownloadWriter downloads content from the given signed URL to the given io Writer.
-func DownloadWriter(u string, w io.Writer) bool {
+func DownloadWriter(u string, w io.Writer) error {
 	ok, body := do("Download", u, http.MethodGet, nil, 0, true)
 
 	defer body.Close()
 
 	if !ok {
-		return false
+		return fmt.Errorf("error downloading")
 	}
 
 	if _, err := io.Copy(w, body); err != nil {
-		log.Errorf("Failed to read http response: %v\n", err)
-		return false
+		return fmt.Errorf("failed to read http response: %v", err)
 	}
 
-	return true
+	return nil
 }
 
 // DeleteURL deletes the target of the given signed URL.
@@ -94,16 +94,17 @@ func DeleteURL(u string) (ok bool) {
 	return
 }
 
-// CheckURL checks if the given signed URL exists by a HEAD http request. Non-existance
-// doesn't fail with an error.
-func CheckURL(u string) (exist bool, ok bool) {
+// Checks if the given signed URL exists by executing a HEAD http request.
+// A file not existing doesn't fail with an error.
+func Exists(u string) (bool, error) {
 	log.Debugf("HEAD '%s'...\n", u)
+
 	resp, err := http.Head(u)
 	if err != nil {
-		log.Errorf("HEAD error: %v\n", err)
-		return false, false
+		return false, fmt.Errorf("error executing HEAD '%s': %v", u, err)
 	}
 
 	defer resp.Body.Close()
-	return IsStatusOK(resp.StatusCode), true
+
+	return IsStatusOK(resp.StatusCode), nil
 }

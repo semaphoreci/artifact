@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 
 	errutil "github.com/semaphoreci/artifact/pkg/err"
+	"github.com/semaphoreci/artifact/pkg/files"
 	"github.com/semaphoreci/artifact/pkg/hub"
-	pathutil "github.com/semaphoreci/artifact/pkg/path"
 	"github.com/semaphoreci/artifact/pkg/storage"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -26,11 +26,11 @@ func runYankForCategory(cmd *cobra.Command, args []string, category, catID strin
 	hubClient, err := hub.NewClient()
 	errutil.Check(err)
 
-	err = pathutil.InitPathID(category, catID)
+	err = files.InitPathID(category, catID)
 	errutil.Check(err)
 	name := args[0]
 
-	name = storage.YankPath(filepath.ToSlash(name))
+	name = files.YankPath(filepath.ToSlash(name))
 	err = storage.Yank(hubClient, name)
 	if err != nil {
 		os.Exit(1) // error already logged
@@ -49,7 +49,7 @@ var YankJobCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("job-id")
 		errutil.Check(err)
-		name := runYankForCategory(cmd, args, pathutil.JOB, catID)
+		name := runYankForCategory(cmd, args, files.JOB, catID)
 		log.Infof("Successfully yanked '%s' from current job artifacts.\n", name)
 	},
 }
@@ -64,7 +64,7 @@ var YankWorkflowCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("workflow-id")
 		errutil.Check(err)
-		name := runYankForCategory(cmd, args, pathutil.WORKFLOW, catID)
+		name := runYankForCategory(cmd, args, files.WORKFLOW, catID)
 		log.Infof("Successfully yanked '%s' from current workflow artifacts.\n", name)
 	},
 }
@@ -77,7 +77,7 @@ var YankProjectCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 
 	Run: func(cmd *cobra.Command, args []string) {
-		name := runYankForCategory(cmd, args, pathutil.PROJECT, "")
+		name := runYankForCategory(cmd, args, files.PROJECT, "")
 		log.Infof("Successfully yanked '%s' from current project artifacts.\n", name)
 	},
 }

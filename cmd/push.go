@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 
 	errutil "github.com/semaphoreci/artifact/pkg/err"
+	"github.com/semaphoreci/artifact/pkg/files"
 	"github.com/semaphoreci/artifact/pkg/hub"
-	pathutil "github.com/semaphoreci/artifact/pkg/path"
 	"github.com/semaphoreci/artifact/pkg/storage"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -28,7 +28,7 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID strin
 	hubClient, err := hub.NewClient()
 	errutil.Check(err)
 
-	err = pathutil.InitPathID(category, catID)
+	err = files.InitPathID(category, catID)
 	errutil.Check(err)
 
 	src, err := getSrc(cmd, args)
@@ -46,10 +46,12 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID strin
 		displayWarningThatExpireInIsNoLongerSupported()
 	}
 
-	dst, src = storage.PushPaths(filepath.ToSlash(dst), filepath.ToSlash(src))
-	if ok := storage.Push(hubClient, dst, src, force); !ok {
-		os.Exit(1) // error already logged
+	dst, src = files.PushPaths(filepath.ToSlash(dst), filepath.ToSlash(src))
+	if err := storage.Push(hubClient, dst, src, force); err != nil {
+		log.Errorf("Error pushing artifact: %v\n", err)
+		os.Exit(1)
 	}
+
 	return dst, src
 }
 
@@ -71,7 +73,7 @@ var PushJobCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("job-id")
 		errutil.Check(err)
-		dst, src := runPushForCategory(cmd, args, pathutil.JOB, catID)
+		dst, src := runPushForCategory(cmd, args, files.JOB, catID)
 		log.Infof("Successfully pushed '%s' as '%s' for current job.\n", src, dst)
 	},
 }
@@ -86,7 +88,7 @@ var PushWorkflowCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("workflow-id")
 		errutil.Check(err)
-		dst, src := runPushForCategory(cmd, args, pathutil.WORKFLOW, catID)
+		dst, src := runPushForCategory(cmd, args, files.WORKFLOW, catID)
 		log.Infof("Successfully pushed '%s' as '%s' for current workflow.\n", src, dst)
 	},
 }
@@ -101,7 +103,7 @@ var PushProjectCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		catID, err := cmd.Flags().GetString("project-id")
 		errutil.Check(err)
-		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, catID)
+		dst, src := runPushForCategory(cmd, args, files.PROJECT, catID)
 		log.Infof("Successfully pushed '%s' as '%s' for current project.\n", src, dst)
 	},
 }
