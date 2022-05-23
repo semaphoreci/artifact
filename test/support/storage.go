@@ -42,9 +42,7 @@ func (m *StorageMockServer) Init(files []string) {
 
 func (m *StorageMockServer) handleHEADRequest(w http.ResponseWriter, r *http.Request) {
 	object := r.URL.Path[1:]
-	if m.isFile(object) {
-		w.WriteHeader(200)
-	} else {
+	if !m.isFile(object) {
 		w.WriteHeader(404)
 	}
 }
@@ -53,7 +51,6 @@ func (m *StorageMockServer) handleGETRequest(w http.ResponseWriter, r *http.Requ
 	object := r.URL.Path[1:]
 	if m.isFile(object) {
 		w.Write([]byte("something"))
-		w.WriteHeader(200)
 	} else {
 		w.WriteHeader(404)
 	}
@@ -62,14 +59,12 @@ func (m *StorageMockServer) handleGETRequest(w http.ResponseWriter, r *http.Requ
 func (m *StorageMockServer) handlePUTRequest(w http.ResponseWriter, r *http.Request) {
 	object := r.URL.Path[1:]
 	m.addFile(object)
-	w.WriteHeader(200)
 }
 
 func (m *StorageMockServer) handleDELETERequest(w http.ResponseWriter, r *http.Request) {
 	object := r.URL.Path[1:]
 	if m.isFile(object) {
 		m.removeFile(object)
-		w.WriteHeader(200)
 	} else {
 		w.WriteHeader(404)
 	}

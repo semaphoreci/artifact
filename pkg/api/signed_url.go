@@ -176,11 +176,11 @@ func (u *SignedURL) GetObject() (string, error) {
 		return parseGoogleStorageURL(URL)
 
 	case strings.HasSuffix(host, "amazonaws.com"):
-		log.Debug("Parsing S3 URL: %s\n", u.URL)
+		log.Debugf("Parsing S3 URL: %s\n", u.URL)
 		return parseS3URL(URL)
 
 	case strings.HasPrefix(host, "127.0.0.1"):
-		log.Debug("Parsing localhost URL: %s\n", u.URL)
+		log.Debugf("Parsing localhost URL: %s\n", u.URL)
 		return parseLocalhostURL(URL)
 
 	default:

@@ -95,7 +95,7 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType generateSi
 		return nil, err
 	}
 
-	log.Debugln("Successfully generated signed URLs.\n")
+	log.Debug("Successfully generated signed URLs.\n")
 	return response, nil
 }
 
