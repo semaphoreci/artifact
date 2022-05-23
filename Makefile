@@ -1,12 +1,5 @@
 .PHONY: build release
 
-go.install:
-	cd /tmp
-	sudo curl -O https://dl.google.com/go/go1.15.linux-amd64.tar.gz
-	sudo tar -xf go1.15.linux-amd64.tar.gz
-	sudo mv go /usr/local
-	cd -
-
 go.get:
 	go get ./...
 

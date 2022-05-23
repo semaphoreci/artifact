@@ -1,6 +1,6 @@
 module github.com/semaphoreci/artifact
 
-go 1.12
+go 1.16
 
 require (
 	github.com/jarcoal/httpmock v1.0.4
