@@ -81,7 +81,7 @@ func (m *StorageMockServer) Host() string {
 func (m *StorageMockServer) PushURLs(paths []string, force bool) ([]*api.SignedURL, error) {
 	signedURLs := []*api.SignedURL{}
 	for _, path := range paths {
-		if force {
+		if !force {
 			signedURLs = append(signedURLs, &api.SignedURL{
 				URL:    fmt.Sprintf("%s/%s", m.URL(), path),
 				Method: "HEAD",
@@ -146,6 +146,8 @@ func (m *StorageMockServer) YankURLs(paths []string) ([]*api.SignedURL, error) {
 }
 
 func (m *StorageMockServer) IsFile(fileName string) bool {
+	fmt.Printf("[STORAGE MOCK] Checking if file %s exists...\n", fileName)
+
 	for _, file := range m.Files {
 		if file == fileName {
 			return true
@@ -156,6 +158,8 @@ func (m *StorageMockServer) IsFile(fileName string) bool {
 }
 
 func (m *StorageMockServer) IsDir(path string) bool {
+	fmt.Printf("[STORAGE MOCK] Checking if directory %s exists...\n", path)
+
 	for _, file := range m.Files {
 		if strings.HasPrefix(file, path) {
 			return true
