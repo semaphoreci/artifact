@@ -8,17 +8,18 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	"github.com/semaphoreci/artifact/pkg/api"
 	"github.com/semaphoreci/artifact/pkg/hub"
 )
 
 type HubMockServer struct {
-	Server         *httptest.Server
-	Handler        http.Handler
-	StorageBaseURL string
+	Server        *httptest.Server
+	Handler       http.Handler
+	StorageServer *StorageMockServer
 }
 
-func NewHubMockServer(storageBaseURL string) *HubMockServer {
-	return &HubMockServer{StorageBaseURL: storageBaseURL}
+func NewHubMockServer(storageServer *StorageMockServer) *HubMockServer {
+	return &HubMockServer{StorageServer: storageServer}
 }
 
 func (m *HubMockServer) Init() {
@@ -31,6 +32,7 @@ func (m *HubMockServer) Init() {
 	}))
 
 	m.Server = mockServer
+	fmt.Printf("Started hub mock at %s\n", mockServer.URL)
 }
 
 func (m *HubMockServer) handleRequest(w http.ResponseWriter, r *http.Request) {
@@ -51,8 +53,15 @@ func (m *HubMockServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("[HUB MOCK] Received request: %v\n", request)
 
+	signedURLs, err := m.generateUrls(request)
+	if err != nil {
+		fmt.Printf("[HUB MOCK] Error generating signed URLs: %v\n", err)
+		w.WriteHeader(500)
+		return
+	}
+
 	response := &hub.GenerateSignedURLsResponse{
-		Urls:  []*hub.SignedURL{},
+		Urls:  signedURLs,
 		Error: "",
 	}
 
@@ -66,9 +75,23 @@ func (m *HubMockServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
-func (m *HubMockServer) generateUrls(request *hub.GenerateSignedURLsRequest) []*hub.SignedURL {
-	// TODO:
-	return nil
+func (m *HubMockServer) generateUrls(request hub.GenerateSignedURLsRequest) ([]*api.SignedURL, error) {
+	switch request.Type {
+	case hub.GenerateSignedURLsRequestPUSH:
+		return m.StorageServer.PushURLs(request.Paths, false)
+
+	case hub.GenerateSignedURLsRequestPUSHFORCE:
+		return m.StorageServer.PushURLs(request.Paths, true)
+
+	case hub.GenerateSignedURLsRequestPULL:
+		return m.StorageServer.PullURLs(request.Paths)
+
+	case hub.GenerateSignedURLsRequestYANK:
+		return m.StorageServer.YankURLs(request.Paths)
+
+	default:
+		return nil, fmt.Errorf("not implemented")
+	}
 }
 
 func (m *HubMockServer) URL() string {

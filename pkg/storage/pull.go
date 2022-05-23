@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 
@@ -58,9 +59,11 @@ func buildArtifacts(signedURLs []*api.SignedURL, localPath, sourcePath string, f
 }
 
 func doPull(force bool, artifacts []*api.Artifact, signedURLs []*api.SignedURL) error {
+	client := &http.Client{}
+
 	for _, artifact := range artifacts {
 		for _, signedURL := range artifact.URLs {
-			if err := signedURL.Follow(artifact); err != nil {
+			if err := signedURL.Follow(client, artifact); err != nil {
 				return err
 			}
 		}

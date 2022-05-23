@@ -20,30 +20,29 @@ type SignedURL struct {
 	Method string `json:"method,omitempty"`
 }
 
-// TODO: It might be better to put these methods in the artifact itself
-func (u *SignedURL) Follow(artifact *Artifact) error {
+func (u *SignedURL) Follow(client *http.Client, artifact *Artifact) error {
 	switch u.Method {
 	case "HEAD":
-		return u.executeHEAD(artifact)
+		return u.head(client, artifact)
 
 	case "GET":
-		return u.executeGET(artifact)
+		return u.get(client, artifact)
 
 	case "PUT":
-		return u.executePUT(artifact)
+		return u.put(client, artifact)
 
 	case "DELETE":
-		return u.executeDELETE(artifact)
+		return u.delete(client, artifact)
 
 	default:
 		return fmt.Errorf("method '%s' not implemented", u.Method)
 	}
 }
 
-func (u *SignedURL) executeHEAD(artifact *Artifact) error {
+func (u *SignedURL) head(client *http.Client, artifact *Artifact) error {
 	log.Debugf("HEAD '%s'...\n", u.URL)
 
-	resp, err := http.Head(u.URL)
+	resp, err := client.Head(u.URL)
 	if err != nil {
 		return fmt.Errorf("error executing HEAD '%s': %v", u, err)
 	}
@@ -58,7 +57,7 @@ func (u *SignedURL) executeHEAD(artifact *Artifact) error {
 	return nil
 }
 
-func (u *SignedURL) executePUT(artifact *Artifact) error {
+func (u *SignedURL) put(client *http.Client, artifact *Artifact) error {
 	log.Debugf("Opening '%s' for upload...\n", artifact.LocalPath)
 
 	f, err := os.Open(artifact.LocalPath)
@@ -89,9 +88,7 @@ func (u *SignedURL) executePUT(artifact *Artifact) error {
 	}
 
 	req.ContentLength = fileInfo.Size()
-
-	// TODO: do not use http.DefaultClient
-	response, err := http.DefaultClient.Do(req)
+	response, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to execute http request: %v", err)
 	}
@@ -106,7 +103,7 @@ func (u *SignedURL) executePUT(artifact *Artifact) error {
 	return nil
 }
 
-func (u *SignedURL) executeGET(artifact *Artifact) error {
+func (u *SignedURL) get(client *http.Client, artifact *Artifact) error {
 	log.Debugf("GET '%s'...\n", u.URL)
 
 	parentDir := filepath.Dir(artifact.LocalPath)
@@ -127,8 +124,7 @@ func (u *SignedURL) executeGET(artifact *Artifact) error {
 		return fmt.Errorf("failed to create GET request: %v", err)
 	}
 
-	// TODO: do not use http.DefaultClient
-	response, err := http.DefaultClient.Do(req)
+	response, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to execute GET request: %v", err)
 	}
@@ -148,7 +144,7 @@ func (u *SignedURL) executeGET(artifact *Artifact) error {
 	return nil
 }
 
-func (u *SignedURL) executeDELETE(artifact *Artifact) error {
+func (u *SignedURL) delete(client *http.Client, artifact *Artifact) error {
 	log.Debugf("DELETE '%s'...\n", u.URL)
 
 	req, err := http.NewRequest("DELETE", u.URL, nil)
@@ -156,7 +152,7 @@ func (u *SignedURL) executeDELETE(artifact *Artifact) error {
 		return fmt.Errorf("failed to create DELETE request: %v", err)
 	}
 
-	response, err := http.DefaultClient.Do(req)
+	response, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to execute DELETE request: %v", err)
 	}
@@ -183,7 +179,7 @@ func (u *SignedURL) GetObject() (string, error) {
 		log.Debug("Parsing S3 URL: %s\n", u.URL)
 		return parseS3URL(URL)
 
-	case strings.HasPrefix(host, "localhost"):
+	case strings.HasPrefix(host, "127.0.0.1"):
 		log.Debug("Parsing localhost URL: %s\n", u.URL)
 		return parseLocalhostURL(URL)
 
@@ -220,5 +216,6 @@ func parseS3URL(URL *url.URL) (string, error) {
 
 // Localhost URLs are used during tests
 func parseLocalhostURL(URL *url.URL) (string, error) {
-	return URL.Path, nil
+	// we don't want the leading slash
+	return URL.Path[1:], nil
 }

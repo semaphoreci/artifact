@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"net/http"
+
 	api "github.com/semaphoreci/artifact/pkg/api"
 	hub "github.com/semaphoreci/artifact/pkg/hub"
 	log "github.com/sirupsen/logrus"
@@ -23,10 +25,12 @@ func Yank(hubClient *hub.Client, name string) error {
 }
 
 func doYank(URLs []*api.SignedURL) error {
+	client := &http.Client{}
+
 	for _, u := range URLs {
-		// TODO: there's an issue with artifacthub not returning the method for yank operations
+		// The hub is not returning the method for yank operations, so we fill it here
 		u.Method = "DELETE"
-		if err := u.Follow(nil); err != nil {
+		if err := u.Follow(client, nil); err != nil {
 			return err
 		}
 	}
