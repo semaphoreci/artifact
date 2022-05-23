@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type testCase struct {
+type pullTestCase struct {
 	EnvVar               string
 	Prefix               string
 	CategoryOverrideFlag string
@@ -21,7 +21,7 @@ type testCase struct {
 func Test__Pull(t *testing.T) {
 	log.SetLevel(log.DebugLevel)
 
-	testCases := []testCase{
+	testCases := []pullTestCase{
 		{
 			EnvVar:               "SEMAPHORE_PROJECT_ID",
 			Prefix:               "projects",
@@ -49,11 +49,11 @@ func Test__Pull(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		runForArtifactLevel(t, testCase)
+		runForPullTestCase(t, testCase)
 	}
 }
 
-func runForArtifactLevel(t *testing.T, testCase testCase) {
+func runForPullTestCase(t *testing.T, testCase pullTestCase) {
 	storageServer := testsupport.NewStorageMockServer()
 	storageServer.Init([]string{
 		fmt.Sprintf("artifacts/%s/1/file1.txt", testCase.Prefix),

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"os"
 	"path/filepath"
 
 	errutil "github.com/semaphoreci/artifact/pkg/err"
@@ -12,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// yankCmd represents the yank command
 var yankCmd = &cobra.Command{
 	Use:     "yank",
 	Aliases: []string{"delete"},
@@ -22,7 +20,7 @@ artifact push. With artifact yank you can delete them if you
 don't need them any more.`,
 }
 
-func runYankForCategory(cmd *cobra.Command, args []string, category, catID string) string {
+func runYankForCategory(cmd *cobra.Command, args []string, category, catID string) (string, error) {
 	hubClient, err := hub.NewClient()
 	errutil.Check(err)
 
@@ -31,65 +29,90 @@ func runYankForCategory(cmd *cobra.Command, args []string, category, catID strin
 	name := args[0]
 
 	name = files.YankPath(filepath.ToSlash(name))
-	err = storage.Yank(hubClient, name)
-	if err != nil {
-		os.Exit(1) // error already logged
+	return name, storage.Yank(hubClient, name)
+}
+
+func NewYankJobCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "job [PATH]",
+		Short: "Deletes a job file or directory from the storage.",
+		Long:  ``,
+		Args:  cobra.ExactArgs(1),
+
+		Run: func(cmd *cobra.Command, args []string) {
+			catID, err := cmd.Flags().GetString("job-id")
+			errutil.Check(err)
+
+			name, err := runYankForCategory(cmd, args, files.JOB, catID)
+			if err != nil {
+				log.Errorf("Error yanking artifact: %v\n", err)
+				errutil.Exit(1)
+				return
+			}
+
+			log.Infof("Successfully yanked '%s' from current job artifacts.\n", name)
+		},
 	}
 
-	return name
+	cmd.Flags().StringP("job-id", "j", "", "set explicit job id")
+	return cmd
 }
 
-// YankJobCmd is the subcommand for "artifact yank job ..."
-var YankJobCmd = &cobra.Command{
-	Use:   "job [PATH]",
-	Short: "Deletes a job file or directory from the storage.",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+func NewYankWorkflowCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "workflow [PATH]",
+		Short: "Deletes a workflow file or directory from the storage.",
+		Long:  ``,
+		Args:  cobra.ExactArgs(1),
 
-	Run: func(cmd *cobra.Command, args []string) {
-		catID, err := cmd.Flags().GetString("job-id")
-		errutil.Check(err)
-		name := runYankForCategory(cmd, args, files.JOB, catID)
-		log.Infof("Successfully yanked '%s' from current job artifacts.\n", name)
-	},
+		Run: func(cmd *cobra.Command, args []string) {
+			catID, err := cmd.Flags().GetString("workflow-id")
+			errutil.Check(err)
+
+			name, err := runYankForCategory(cmd, args, files.WORKFLOW, catID)
+			if err != nil {
+				log.Errorf("Error yanking artifact: %v\n", err)
+				errutil.Exit(1)
+				return
+			}
+
+			log.Infof("Successfully yanked '%s' from current workflow artifacts.\n", name)
+		},
+	}
+
+	cmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
+	return cmd
 }
 
-// YankWorkflowCmd is the subcommand for "artifact yank workflow ..."
-var YankWorkflowCmd = &cobra.Command{
-	Use:   "workflow [PATH]",
-	Short: "Deletes a workflow file or directory from the storage.",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+func NewYankProjectCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "project [PATH]",
+		Short: "Deletes a project file or directory from the storage.",
+		Long:  ``,
+		Args:  cobra.ExactArgs(1),
 
-	Run: func(cmd *cobra.Command, args []string) {
-		catID, err := cmd.Flags().GetString("workflow-id")
-		errutil.Check(err)
-		name := runYankForCategory(cmd, args, files.WORKFLOW, catID)
-		log.Infof("Successfully yanked '%s' from current workflow artifacts.\n", name)
-	},
-}
+		Run: func(cmd *cobra.Command, args []string) {
+			catID, err := cmd.Flags().GetString("project-id")
+			errutil.Check(err)
 
-// YankProjectCmd is the subcommand for "artifact yank project ..."
-var YankProjectCmd = &cobra.Command{
-	Use:   "project [PATH]",
-	Short: "Deletes a project file or directory from the storage.",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+			name, err := runYankForCategory(cmd, args, files.PROJECT, catID)
+			if err != nil {
+				log.Errorf("Error yanking artifact: %v\n", err)
+				errutil.Exit(1)
+				return
+			}
 
-	Run: func(cmd *cobra.Command, args []string) {
-		name := runYankForCategory(cmd, args, files.PROJECT, "")
-		log.Infof("Successfully yanked '%s' from current project artifacts.\n", name)
-	},
+			log.Infof("Successfully yanked '%s' from current project artifacts.\n", name)
+		},
+	}
+
+	cmd.Flags().StringP("project-id", "p", "", "set explicit project id")
+	return cmd
 }
 
 func init() {
 	rootCmd.AddCommand(yankCmd)
-
-	yankCmd.AddCommand(YankJobCmd)
-	yankCmd.AddCommand(YankWorkflowCmd)
-	yankCmd.AddCommand(YankProjectCmd)
-
-	YankJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
-	YankWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
-	YankProjectCmd.Flags().StringP("project-id", "p", "", "set explicit project id")
+	yankCmd.AddCommand(NewYankJobCmd())
+	yankCmd.AddCommand(NewYankWorkflowCmd())
+	yankCmd.AddCommand(NewYankProjectCmd())
 }

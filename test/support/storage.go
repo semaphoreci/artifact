@@ -42,14 +42,14 @@ func (m *StorageMockServer) Init(files []string) {
 
 func (m *StorageMockServer) handleHEADRequest(w http.ResponseWriter, r *http.Request) {
 	object := r.URL.Path[1:]
-	if !m.isFile(object) {
+	if !m.IsFile(object) {
 		w.WriteHeader(404)
 	}
 }
 
 func (m *StorageMockServer) handleGETRequest(w http.ResponseWriter, r *http.Request) {
 	object := r.URL.Path[1:]
-	if m.isFile(object) {
+	if m.IsFile(object) {
 		w.Write([]byte("something"))
 	} else {
 		w.WriteHeader(404)
@@ -63,7 +63,7 @@ func (m *StorageMockServer) handlePUTRequest(w http.ResponseWriter, r *http.Requ
 
 func (m *StorageMockServer) handleDELETERequest(w http.ResponseWriter, r *http.Request) {
 	object := r.URL.Path[1:]
-	if m.isFile(object) {
+	if m.IsFile(object) {
 		m.removeFile(object)
 	} else {
 		w.WriteHeader(404)
@@ -100,13 +100,13 @@ func (m *StorageMockServer) PushURLs(paths []string, force bool) ([]*api.SignedU
 func (m *StorageMockServer) PullURLs(paths []string) ([]*api.SignedURL, error) {
 	path := paths[0]
 
-	if m.isFile(path) {
+	if m.IsFile(path) {
 		return []*api.SignedURL{
 			{URL: fmt.Sprintf("%s/%s", m.URL(), path), Method: "GET"},
 		}, nil
 	}
 
-	if m.isDir(path) {
+	if m.IsDir(path) {
 		signedURLs := []*api.SignedURL{}
 		for _, file := range m.findFilesInDir(path) {
 			signedURLs = append(signedURLs, &api.SignedURL{
@@ -124,13 +124,13 @@ func (m *StorageMockServer) PullURLs(paths []string) ([]*api.SignedURL, error) {
 func (m *StorageMockServer) YankURLs(paths []string) ([]*api.SignedURL, error) {
 	path := paths[0]
 
-	if m.isFile(path) {
+	if m.IsFile(path) {
 		return []*api.SignedURL{
 			{URL: fmt.Sprintf("%s/%s", m.URL(), path), Method: "DELETE"},
 		}, nil
 	}
 
-	if m.isDir(path) {
+	if m.IsDir(path) {
 		signedURLs := []*api.SignedURL{}
 		for _, file := range m.findFilesInDir(path) {
 			signedURLs = append(signedURLs, &api.SignedURL{
@@ -145,7 +145,7 @@ func (m *StorageMockServer) YankURLs(paths []string) ([]*api.SignedURL, error) {
 	return nil, fmt.Errorf("%s does not exist", path)
 }
 
-func (m *StorageMockServer) isFile(fileName string) bool {
+func (m *StorageMockServer) IsFile(fileName string) bool {
 	for _, file := range m.Files {
 		if file == fileName {
 			return true
@@ -155,7 +155,7 @@ func (m *StorageMockServer) isFile(fileName string) bool {
 	return false
 }
 
-func (m *StorageMockServer) isDir(path string) bool {
+func (m *StorageMockServer) IsDir(path string) bool {
 	for _, file := range m.Files {
 		if strings.HasPrefix(file, path) {
 			return true
