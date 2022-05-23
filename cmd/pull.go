@@ -105,7 +105,10 @@ func NewPullProjectCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			dst, src, err := runPullForCategory(cmd, args, files.PROJECT, "")
+			catID, err := cmd.Flags().GetString("project-id")
+			errutil.Check(err)
+
+			dst, src, err := runPullForCategory(cmd, args, files.PROJECT, catID)
 			if err != nil {
 				log.Errorf("Error pulling artifact: %v\n", err)
 				errutil.Exit(1)
