@@ -10,7 +10,8 @@ import (
 	"os"
 	"time"
 
-	httputil "github.com/semaphoreci/artifact/pkg/http"
+	api "github.com/semaphoreci/artifact/pkg/api"
+	common "github.com/semaphoreci/artifact/pkg/common"
 	retry "github.com/semaphoreci/artifact/pkg/retry"
 	log "github.com/sirupsen/logrus"
 )
@@ -36,8 +37,8 @@ type GenerateSignedURLsRequest struct {
 }
 
 type GenerateSignedURLsResponse struct {
-	Urls  []*SignedURL `json:"urls,omitempty"`
-	Error string       `json:"error,omitempty"`
+	Urls  []*api.SignedURL `json:"urls,omitempty"`
+	Error string           `json:"error,omitempty"`
 }
 
 func NewClient() (*Client, error) {
@@ -68,7 +69,7 @@ func NewClient() (*Client, error) {
 	}, nil
 }
 
-func (c *Client) GenerateSignedURL(remotePaths []string, requestType generateSignedURLsRequestType) (*GenerateSignedURLsResponse, error) {
+func (c *Client) GenerateSignedURLs(remotePaths []string, requestType generateSignedURLsRequestType) (*GenerateSignedURLsResponse, error) {
 	request := &GenerateSignedURLsRequest{
 		Paths: remotePaths,
 		Type:  requestType,
@@ -119,7 +120,7 @@ func (c *Client) executeRequest(data interface{}) (*GenerateSignedURLsResponse, 
 
 	defer r.Body.Close()
 
-	if !httputil.IsStatusOK(r.StatusCode) {
+	if !common.IsStatusOK(r.StatusCode) {
 		return nil, fmt.Errorf("signed URL request returned %d", r.StatusCode)
 	}
 

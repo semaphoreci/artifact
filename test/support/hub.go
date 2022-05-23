@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+
+	"github.com/semaphoreci/artifact/pkg/hub"
 )
 
 type HubMockServer struct {
@@ -32,7 +34,7 @@ func (m *HubMockServer) Init() {
 }
 
 func (m *HubMockServer) handleRequest(w http.ResponseWriter, r *http.Request) {
-	request := gcs.GenerateSignedURLsRequest{}
+	request := hub.GenerateSignedURLsRequest{}
 	bytes, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		fmt.Printf("[HUB MOCK] Error reading request body: %v\n", err)
@@ -49,8 +51,8 @@ func (m *HubMockServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("[HUB MOCK] Received request: %v\n", request)
 
-	response := &gcs.GenerateSignedURLsResponse{
-		Urls:  []*gcs.SignedURL{},
+	response := &hub.GenerateSignedURLsResponse{
+		Urls:  []*hub.SignedURL{},
 		Error: "",
 	}
 
@@ -64,9 +66,9 @@ func (m *HubMockServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
-func (m *HubMockServer) generateUrls(request *gcs.GenerateSignedURLsRequest) []*gcs.SignedURL {
+func (m *HubMockServer) generateUrls(request *hub.GenerateSignedURLsRequest) []*hub.SignedURL {
 	// TODO:
-
+	return nil
 }
 
 func (m *HubMockServer) URL() string {

@@ -44,7 +44,7 @@ func PushPaths(dst, src string) (string, string) {
 	newDst = PrefixedPathFromSource(newDst, src)
 	newSrc := path.Clean(src)
 
-	log.Debugln("Paths for pushing...")
+	log.Debug("Paths for pushing...\n")
 	log.Debugf("> Input destination: '%s'\n", dst)
 	log.Debugf("> Input source: '%s'\n", src)
 	log.Debugf("> Output destination: '%s'\n", newDst)
