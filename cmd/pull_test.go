@@ -143,6 +143,16 @@ func runForPullTestCase(t *testing.T, testCase pullTestCase) {
 		os.RemoveAll("two-levels")
 	})
 
+	t.Run(testCase.Prefix+" two-levels dir sub-directory", func(t *testing.T) {
+		cmd := testCase.Command()
+		cmd.SetArgs([]string{"two-levels/sub"})
+		cmd.Execute()
+
+		assert.DirExists(t, "sub")
+		assert.FileExists(t, "sub/file1.txt")
+		os.RemoveAll("sub")
+	})
+
 	t.Run(testCase.Prefix+" overriding category id", func(t *testing.T) {
 		cmd := testCase.Command()
 		cmd.SetArgs([]string{"another.txt"})
