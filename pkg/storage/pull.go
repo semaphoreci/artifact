@@ -13,9 +13,9 @@ import (
 
 func Pull(hubClient *hub.Client, dst, src string, force bool) error {
 	log.Debug("Pulling...\n")
-	log.Debugf("> Source: %s\n", src)
-	log.Debugf("> Destination: %s\n", dst)
-	log.Debugf("> Force: %v\n", force)
+	log.Debugf("* Source: %s\n", src)
+	log.Debugf("* Destination: %s\n", dst)
+	log.Debugf("* Force: %v\n", force)
 
 	response, err := hubClient.GenerateSignedURLs([]string{src}, hub.GenerateSignedURLsRequestPULL)
 	if err != nil {

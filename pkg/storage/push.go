@@ -15,9 +15,9 @@ import (
 
 func Push(hubClient *hub.Client, dst, src string, force bool) error {
 	log.Debug("Pushing...\n")
-	log.Debugf("> Source: %s\n", src)
-	log.Debugf("> Destination: %s\n", dst)
-	log.Debugf("> Force: %v\n", force)
+	log.Debugf("* Source: %s\n", src)
+	log.Debugf("* Destination: %s\n", dst)
+	log.Debugf("* Force: %v\n", force)
 
 	artifacts, err := locateArtifacts(src, dst)
 	if err != nil {

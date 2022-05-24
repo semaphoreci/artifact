@@ -1,4 +1,4 @@
-.PHONY: build release
+.PHONY: build release test
 
 go.get:
 	go get ./...
@@ -8,7 +8,6 @@ go.fmt:
 
 test:
 	gotestsum --format short-verbose --junitfile junit-report.xml --packages="./..." -- -p 1
-.PHONY: test
 
 build:
 	env GOOS=$(OS) GOARCH=$(ARCH) go build -o artifact

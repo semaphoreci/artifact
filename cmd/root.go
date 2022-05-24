@@ -2,7 +2,7 @@ package cmd
 
 import (
 	homedir "github.com/mitchellh/go-homedir"
-	errutil "github.com/semaphoreci/artifact/pkg/err"
+	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/logger"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

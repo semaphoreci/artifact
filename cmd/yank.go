@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"path/filepath"
-
-	errutil "github.com/semaphoreci/artifact/pkg/err"
+	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/files"
 	"github.com/semaphoreci/artifact/pkg/hub"
 	"github.com/semaphoreci/artifact/pkg/storage"
@@ -20,16 +18,14 @@ artifact push. With artifact yank you can delete them if you
 don't need them any more.`,
 }
 
-func runYankForCategory(cmd *cobra.Command, args []string, category, catID string) (string, error) {
+func runYankForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, error) {
 	hubClient, err := hub.NewClient()
 	errutil.Check(err)
 
-	err = files.InitPathID(category, catID)
+	paths, err := resolver.Resolve(files.OperationYank, args[0], "")
 	errutil.Check(err)
-	name := args[0]
 
-	name = files.YankPath(filepath.ToSlash(name))
-	return name, storage.Yank(hubClient, name)
+	return paths, storage.Yank(hubClient, paths.Source)
 }
 
 func NewYankJobCmd() *cobra.Command {
@@ -40,17 +36,20 @@ func NewYankJobCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			catID, err := cmd.Flags().GetString("job-id")
+			jobId, err := cmd.Flags().GetString("job-id")
 			errutil.Check(err)
 
-			name, err := runYankForCategory(cmd, args, files.JOB, catID)
+			resolver, err := files.NewPathResolver(files.ResourceTypeJob, jobId)
+			errutil.Check(err)
+
+			paths, err := runYankForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error yanking artifact: %v\n", err)
 				errutil.Exit(1)
 				return
 			}
 
-			log.Infof("Successfully yanked '%s' from current job artifacts.\n", name)
+			log.Infof("Successfully yanked '%s' from current job artifacts.\n", paths)
 		},
 	}
 
@@ -66,17 +65,20 @@ func NewYankWorkflowCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			catID, err := cmd.Flags().GetString("workflow-id")
+			workflowId, err := cmd.Flags().GetString("workflow-id")
 			errutil.Check(err)
 
-			name, err := runYankForCategory(cmd, args, files.WORKFLOW, catID)
+			resolver, err := files.NewPathResolver(files.ResourceTypeWorkflow, workflowId)
+			errutil.Check(err)
+
+			paths, err := runYankForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error yanking artifact: %v\n", err)
 				errutil.Exit(1)
 				return
 			}
 
-			log.Infof("Successfully yanked '%s' from current workflow artifacts.\n", name)
+			log.Infof("Successfully yanked '%s' from current workflow artifacts.\n", paths)
 		},
 	}
 
@@ -92,17 +94,20 @@ func NewYankProjectCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			catID, err := cmd.Flags().GetString("project-id")
+			projectId, err := cmd.Flags().GetString("project-id")
 			errutil.Check(err)
 
-			name, err := runYankForCategory(cmd, args, files.PROJECT, catID)
+			resolver, err := files.NewPathResolver(files.ResourceTypeProject, projectId)
+			errutil.Check(err)
+
+			paths, err := runYankForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error yanking artifact: %v\n", err)
 				errutil.Exit(1)
 				return
 			}
 
-			log.Infof("Successfully yanked '%s' from current project artifacts.\n", name)
+			log.Infof("Successfully yanked '%s' from current project artifacts.\n", paths.Source)
 		},
 	}
 

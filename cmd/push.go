@@ -6,9 +6,8 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
-	errutil "github.com/semaphoreci/artifact/pkg/err"
+	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/files"
 	"github.com/semaphoreci/artifact/pkg/hub"
 	"github.com/semaphoreci/artifact/pkg/storage"
@@ -36,17 +35,14 @@ var pushCmd = &cobra.Command{
 while the rest of the semaphore process, or after it.`,
 }
 
-func runPushForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string, error) {
+func runPushForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, error) {
 	hubClient, err := hub.NewClient()
 	errutil.Check(err)
 
-	err = files.InitPathID(category, catID)
+	localSource, err := getSrc(cmd, args)
 	errutil.Check(err)
 
-	src, err := getSrc(cmd, args)
-	errutil.Check(err)
-
-	dst, err := cmd.Flags().GetString("destination")
+	remoteDestination, err := cmd.Flags().GetString("destination")
 	errutil.Check(err)
 
 	force, err := cmd.Flags().GetBool("force")
@@ -58,8 +54,12 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID strin
 		displayWarningThatExpireInIsNoLongerSupported()
 	}
 
-	dst, src = files.PushPaths(filepath.ToSlash(dst), filepath.ToSlash(src))
-	return dst, src, storage.Push(hubClient, dst, src, force)
+	paths, err := resolver.Resolve(files.OperationPush, localSource, remoteDestination)
+	if err != nil {
+		return nil, err
+	}
+
+	return paths, storage.Push(hubClient, paths.Destination, paths.Source, force)
 }
 
 func displayWarningThatExpireInIsNoLongerSupported() {
@@ -78,16 +78,22 @@ func NewPushJobCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			catID, err := cmd.Flags().GetString("job-id")
+			jobId, err := cmd.Flags().GetString("job-id")
 			errutil.Check(err)
-			dst, src, err := runPushForCategory(cmd, args, files.JOB, catID)
+
+			resolver, err := files.NewPathResolver(files.ResourceTypeJob, jobId)
+			errutil.Check(err)
+
+			paths, err := runPushForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pushing artifact: %v\n", err)
 				errutil.Exit(1)
 				return
 			}
 
-			log.Infof("Successfully pushed '%s' as '%s' for current job.\n", src, dst)
+			log.Info("Successfully pushed artifact for current job.\n")
+			log.Infof("* Local source: %s.\n", paths.Source)
+			log.Infof("* Remote destination: %s.\n", paths.Destination)
 		},
 	}
 
@@ -107,17 +113,22 @@ func NewPushWorkflowCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			catID, err := cmd.Flags().GetString("workflow-id")
+			workflowId, err := cmd.Flags().GetString("workflow-id")
 			errutil.Check(err)
 
-			dst, src, err := runPushForCategory(cmd, args, files.WORKFLOW, catID)
+			resolver, err := files.NewPathResolver(files.ResourceTypeWorkflow, workflowId)
+			errutil.Check(err)
+
+			paths, err := runPushForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pushing artifact: %v\n", err)
 				errutil.Exit(1)
 				return
 			}
 
-			log.Infof("Successfully pushed '%s' as '%s' for current workflow.\n", src, dst)
+			log.Info("Successfully pushed artifact for current job.\n")
+			log.Infof("* Local source: %s.\n", paths.Source)
+			log.Infof("* Remote destination: %s.\n", paths.Destination)
 		},
 	}
 
@@ -137,17 +148,22 @@ func NewPushProjectCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			catID, err := cmd.Flags().GetString("project-id")
+			projectId, err := cmd.Flags().GetString("project-id")
 			errutil.Check(err)
 
-			dst, src, err := runPushForCategory(cmd, args, files.PROJECT, catID)
+			resolver, err := files.NewPathResolver(files.ResourceTypeProject, projectId)
+			errutil.Check(err)
+
+			paths, err := runPushForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pushing artifact: %v\n", err)
 				errutil.Exit(1)
 				return
 			}
 
-			log.Infof("Successfully pushed '%s' as '%s' for current project.\n", src, dst)
+			log.Info("Successfully pushed artifact for current job.\n")
+			log.Infof("* Local source: %s.\n", paths.Source)
+			log.Infof("* Remote destination: %s.\n", paths.Destination)
 		},
 	}
 

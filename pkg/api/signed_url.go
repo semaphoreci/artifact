@@ -14,7 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// SignedURL contains an url and its method type.
 type SignedURL struct {
 	URL    string `json:"url,omitempty"`
 	Method string `json:"method,omitempty"`

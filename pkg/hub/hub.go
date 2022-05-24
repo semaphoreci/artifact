@@ -60,7 +60,7 @@ func NewClient() (*Client, error) {
 	u.Path = "/api/v1/artifacts"
 
 	log.Debug("Hub client properly configured.\n")
-	log.Debugf("> URL: %s\n", u.String())
+	log.Debugf("* URL: %s\n", u.String())
 
 	return &Client{
 		URL:        u.String(),
@@ -76,8 +76,8 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType generateSi
 	}
 
 	log.Debug("Sending request to generate signed URLs...\n")
-	log.Debugf("> Request type: %v\n", requestType)
-	log.Debugf("> Paths: %v\n", remotePaths)
+	log.Debugf("* Request type: %v\n", requestType)
+	log.Debugf("* Paths: %v\n", remotePaths)
 
 	var response *GenerateSignedURLsResponse
 	err := retry.RetryWithConstantWait("generate signed URLs", 5, time.Second, func() error {

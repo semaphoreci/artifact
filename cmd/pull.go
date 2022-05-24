@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"path/filepath"
-
-	errutil "github.com/semaphoreci/artifact/pkg/err"
+	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/files"
 	"github.com/semaphoreci/artifact/pkg/hub"
 	"github.com/semaphoreci/artifact/pkg/storage"
@@ -20,22 +18,24 @@ artifact push. With artifact pull you can download them to the current directory
 to use them in a later phase, debug, or getting the results.`,
 }
 
-func runPullForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string, error) {
-	hubClient, err := hub.NewClient()
-	errutil.Check(err)
-
-	err = files.InitPathID(category, catID)
-	errutil.Check(err)
-	src := args[0]
-
-	dst, err := cmd.Flags().GetString("destination")
+// Maybe use an api.Artifact?
+func runPullForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, error) {
+	localDestination, err := cmd.Flags().GetString("destination")
 	errutil.Check(err)
 
 	force, err := cmd.Flags().GetBool("force")
 	errutil.Check(err)
 
-	dst, src = files.PullPaths(filepath.ToSlash(dst), filepath.ToSlash(src))
-	return dst, src, storage.Pull(hubClient, dst, src, force)
+	hubClient, err := hub.NewClient()
+	errutil.Check(err)
+
+	remoteSource := args[0]
+	paths, err := resolver.Resolve(files.OperationPull, remoteSource, localDestination)
+	if err != nil {
+		return nil, err
+	}
+
+	return paths, storage.Pull(hubClient, paths.Destination, paths.Source, force)
 }
 
 func NewPullJobCmd() *cobra.Command {
@@ -46,10 +46,13 @@ func NewPullJobCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			catID, err := cmd.Flags().GetString("job-id")
+			jobId, err := cmd.Flags().GetString("job-id")
 			errutil.Check(err)
 
-			dst, src, err := runPullForCategory(cmd, args, files.JOB, catID)
+			resolver, err := files.NewPathResolver(files.ResourceTypeJob, jobId)
+			errutil.Check(err)
+
+			paths, err := runPullForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pulling artifact: %v\n", err)
 				errutil.Exit(1)
@@ -57,8 +60,8 @@ func NewPullJobCmd() *cobra.Command {
 			}
 
 			log.Info("Successfully pulled artifact for current job.\n")
-			log.Infof("> Source: '%s'.\n", src)
-			log.Infof("> Destination: '%s'.\n", dst)
+			log.Infof("* Remote source: '%s'.\n", paths.Source)
+			log.Infof("* Local destination: '%s'.\n", paths.Destination)
 		},
 	}
 
@@ -76,9 +79,13 @@ func NewPullWorkflowCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			catID, err := cmd.Flags().GetString("workflow-id")
+			workflowId, err := cmd.Flags().GetString("workflow-id")
 			errutil.Check(err)
-			dst, src, err := runPullForCategory(cmd, args, files.WORKFLOW, catID)
+
+			resolver, err := files.NewPathResolver(files.ResourceTypeWorkflow, workflowId)
+			errutil.Check(err)
+
+			paths, err := runPullForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pulling artifact: %v\n", err)
 				errutil.Exit(1)
@@ -86,8 +93,8 @@ func NewPullWorkflowCmd() *cobra.Command {
 			}
 
 			log.Info("Successfully pulled artifact for current workflow.\n")
-			log.Infof("> Source: '%s'.\n", src)
-			log.Infof("> Destination: '%s'.\n", dst)
+			log.Infof("* Remote source: '%s'.\n", paths.Source)
+			log.Infof("* Local destination: '%s'.\n", paths.Destination)
 		},
 	}
 
@@ -105,10 +112,13 @@ func NewPullProjectCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			catID, err := cmd.Flags().GetString("project-id")
+			projectId, err := cmd.Flags().GetString("project-id")
 			errutil.Check(err)
 
-			dst, src, err := runPullForCategory(cmd, args, files.PROJECT, catID)
+			resolver, err := files.NewPathResolver(files.ResourceTypeProject, projectId)
+			errutil.Check(err)
+
+			paths, err := runPullForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pulling artifact: %v\n", err)
 				errutil.Exit(1)
@@ -116,8 +126,8 @@ func NewPullProjectCmd() *cobra.Command {
 			}
 
 			log.Info("Successfully pulled artifact for current project.\n")
-			log.Infof("> Source: '%s'.\n", src)
-			log.Infof("> Destination: '%s'.\n", dst)
+			log.Infof("* Remote source: '%s'.\n", paths.Source)
+			log.Infof("* Local destination: '%s'.\n", paths.Destination)
 		},
 	}
 
@@ -129,12 +139,7 @@ func NewPullProjectCmd() *cobra.Command {
 
 func init() {
 	rootCmd.AddCommand(pullCmd)
-
-	pullJobCmd := NewPullJobCmd()
-	pullWorkflowCmd := NewPullWorkflowCmd()
-	pullProjectCmd := NewPullProjectCmd()
-
-	pullCmd.AddCommand(pullJobCmd)
-	pullCmd.AddCommand(pullWorkflowCmd)
-	pullCmd.AddCommand(pullProjectCmd)
+	pullCmd.AddCommand(NewPullJobCmd())
+	pullCmd.AddCommand(NewPullWorkflowCmd())
+	pullCmd.AddCommand(NewPullProjectCmd())
 }
