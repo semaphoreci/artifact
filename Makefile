@@ -11,4 +11,3 @@ test:
 
 build:
 	env GOOS=$(OS) GOARCH=$(ARCH) go build -o artifact
-	tar -czvf /tmp/artifact.tar.gz artifact
