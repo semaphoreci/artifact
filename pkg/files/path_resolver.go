@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -92,8 +91,8 @@ func (r *PathResolver) Resolve(operation, source, destination string) (*Resolved
 
 func (r *PathResolver) Pull(source, destination string) *ResolvedPath {
 	remoteSource := ToRelative(source)
-	localDestination := path.Clean(PathFromSource(destination, remoteSource))
-	remoteSource = r.prefixedPath(remoteSource)
+	localDestination := path.Clean(pathFromSource(destination, remoteSource))
+	remoteSource = r.PrefixedPath(remoteSource)
 
 	log.Debug("Resolved paths.\n")
 	log.Debugf("* Local destination: %s\n", localDestination)
@@ -103,7 +102,8 @@ func (r *PathResolver) Pull(source, destination string) *ResolvedPath {
 }
 
 func (r *PathResolver) Push(source, destination string) *ResolvedPath {
-	remoteDestination := r.prefixedPathFromSource(ToRelative(destination), source)
+	remoteDestination := ToRelative(destination)
+	remoteDestination = r.PrefixedPath(pathFromSource(remoteDestination, source))
 	localSource := path.Clean(source)
 
 	log.Debug("Resolved paths.\n")
@@ -117,7 +117,7 @@ func (r *PathResolver) Push(source, destination string) *ResolvedPath {
 }
 
 func (r *PathResolver) Yank(file string) *ResolvedPath {
-	prefixedFile := r.prefixedPath(ToRelative(file))
+	prefixedFile := r.PrefixedPath(ToRelative(file))
 
 	log.Debug("Resolved paths.\n")
 	log.Debugf("* Remote file: %s\n", prefixedFile)
@@ -125,41 +125,22 @@ func (r *PathResolver) Yank(file string) *ResolvedPath {
 	return &ResolvedPath{Source: prefixedFile}
 }
 
-// PrefixedPath returns paths for Google Cloud Storage.
-// For project files, it returns like: artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip
-// For workflow files, it returns like: artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip
-// For job files, it returns like: artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip
-func (r *PathResolver) prefixedPath(filepath string) string {
+/*
+ * Get resource-prefixed paths for paths in remote storage.
+ *
+ * For project: artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip
+ * For workflow: artifacts/workflows/<SEMAPHORE_WORKFLOW_ID>/x.zip
+ * For job: artifacts/jobs/<SEMAPHORE_JOB_ID>/x.zip
+ */
+func (r *PathResolver) PrefixedPath(filepath string) string {
 	return path.Join("artifacts", r.ResourceTypePlural, r.ResourceIdentifier, filepath)
 }
 
-// PrefixedPathFromSource returns a path for Google Cloud Storage, where destination filename can be
-// empty. In this case filename is gained from source filename, eg. uploading /from/this/path/x.zip
-// with empty --destination to the project will return artifacts/projects/<SEMAPHORE_PROJECT_ID>/x.zip,
-// but with --destination=y.zip will result in artifacts/projects/<SEMAPHORE_PROJECT_ID>/y.zip .
-func (r *PathResolver) prefixedPathFromSource(dstFilepath, srcFilepath string) string {
-	dstFilepath = PathFromSource(dstFilepath, srcFilepath)
-	return r.prefixedPath(dstFilepath)
-}
-
-// PathFromSource returns a path where destination filename can be empty. If it's empty, the name is
-// gained from the source filename.
-func PathFromSource(dstFilepath, srcFilepath string) string {
-	if len(dstFilepath) == 0 {
-		dstFilepath = path.Base(srcFilepath)
+// If no destination is set, we take the destination path from the source.
+func pathFromSource(destination, source string) string {
+	if destination == "" {
+		return path.Base(source)
 	}
-	return dstFilepath
-}
 
-// ToRelative removes all ./, ../ etc prefixes from the string.
-func ToRelative(filepath string) string {
-	cleaned := path.Clean(filepath)
-	if len(cleaned) == strings.Count(cleaned, ".") {
-		return ""
-	}
-	trimmed := strings.TrimLeft(cleaned, "./") // removed . and / chars from left
-	left := cleaned[:len(cleaned)-len(trimmed)]
-	// looking for . on the right side of the cut of left part
-	farLeft := strings.TrimRight(left, ".")
-	return cleaned[len(farLeft):]
+	return destination
 }

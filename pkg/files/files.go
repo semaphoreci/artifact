@@ -3,6 +3,8 @@ package files
 import (
 	"fmt"
 	"os"
+	"path"
+	"strings"
 )
 
 const ExpirePrefix = "var/expires-in/"
@@ -48,4 +50,20 @@ func IsFileSrc(src string) (bool, error) {
 	}
 
 	return false, fmt.Errorf("path '%s' doesn't exist", src)
+}
+
+// Removes all ./, ../ etc prefixes from the string.
+func ToRelative(filepath string) string {
+	cleaned := path.Clean(filepath)
+	if len(cleaned) == strings.Count(cleaned, ".") {
+		return ""
+	}
+
+	// removed . and / chars from left
+	trimmed := strings.TrimLeft(cleaned, "./")
+	left := cleaned[:len(cleaned)-len(trimmed)]
+
+	// looking for . on the right side of the cut of left part
+	farLeft := strings.TrimRight(left, ".")
+	return cleaned[len(farLeft):]
 }

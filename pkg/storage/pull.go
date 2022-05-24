@@ -30,7 +30,7 @@ func Pull(hubClient *hub.Client, dst, src string, force bool) error {
 	return doPull(force, artifacts, response.Urls)
 }
 
-func buildArtifacts(signedURLs []*api.SignedURL, localPath, sourcePath string, force bool) ([]*api.Artifact, error) {
+func buildArtifacts(signedURLs []*api.SignedURL, localPath, remotePath string, force bool) ([]*api.Artifact, error) {
 	artifacts := []*api.Artifact{}
 
 	for _, signedURL := range signedURLs {
@@ -40,7 +40,7 @@ func buildArtifacts(signedURLs []*api.SignedURL, localPath, sourcePath string, f
 		}
 
 		// TODO: figure out if there's a better way to find this localPath
-		localPath := path.Join(localPath, obj[len(sourcePath):])
+		localPath := path.Join(localPath, obj[len(remotePath):])
 
 		if !force {
 			if _, err := os.Stat(localPath); err == nil {
