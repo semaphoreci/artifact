@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -77,6 +78,9 @@ type ResolvedPath struct {
 }
 
 func (r *PathResolver) Resolve(operation, source, destination string) (*ResolvedPath, error) {
+	source = filepath.ToSlash(source)
+	destination = filepath.ToSlash(destination)
+
 	switch operation {
 	case OperationPush:
 		return r.Push(source, destination), nil

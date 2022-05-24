@@ -91,7 +91,6 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType generateSi
 	})
 
 	if err != nil {
-		log.Errorf("Error executing signed URLs request: %v\n", err)
 		return nil, err
 	}
 

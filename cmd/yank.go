@@ -45,6 +45,7 @@ func NewYankJobCmd() *cobra.Command {
 			paths, err := runYankForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error yanking artifact: %v\n", err)
+				log.Error("Please check if the artifact you are trying to yank exists.\n")
 				errutil.Exit(1)
 				return
 			}
@@ -74,6 +75,7 @@ func NewYankWorkflowCmd() *cobra.Command {
 			paths, err := runYankForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error yanking artifact: %v\n", err)
+				log.Error("Please check if the artifact you are trying to yank exists.\n")
 				errutil.Exit(1)
 				return
 			}
@@ -103,6 +105,7 @@ func NewYankProjectCmd() *cobra.Command {
 			paths, err := runYankForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error yanking artifact: %v\n", err)
+				log.Error("Please check if the artifact you are trying to yank exists.\n")
 				errutil.Exit(1)
 				return
 			}
