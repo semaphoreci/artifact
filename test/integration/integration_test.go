@@ -122,6 +122,25 @@ func Test__Push(t *testing.T) {
 	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 	os.Setenv("SEMAPHORE_JOB_ID", "1")
 
+	t.Run("pushing empty file", func(t *testing.T) {
+		tmpFilePath, _ := ioutil.TempFile("", "*.file")
+		tmpFileName := filepath.Base(tmpFilePath.Name())
+
+		output, err := executeCommand("push", rootFolder, []string{tmpFilePath.Name()})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pushed artifact for current job")
+		_ = os.Remove(tmpFilePath.Name())
+
+		output, err = executeCommand("pull", rootFolder, []string{tmpFileName})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+
+		fileInfo, err := os.Stat(tmpFileName)
+		assert.Nil(t, err)
+		assert.Zero(t, fileInfo.Size())
+		_ = os.Remove(tmpFileName)
+	})
+
 	t.Run("pushing single file that exists remotely throws error", func(t *testing.T) {
 		tmpFile, _ := ioutil.TempFile("", "")
 		tmpFile.Write([]byte("file1"))
@@ -312,7 +331,12 @@ func executeCommand(command, rootFolder string, args []string) (string, error) {
 }
 
 func createTempScript(command string) (string, error) {
-	tmpScript, err := ioutil.TempFile("", "*.sh")
+	filePattern := "*.sh"
+	if runtime.GOOS == "windows" {
+		filePattern = "*.ps1"
+	}
+
+	tmpScript, err := ioutil.TempFile("", filePattern)
 	if err != nil {
 		return "", err
 	}
