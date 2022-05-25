@@ -341,6 +341,8 @@ func createTempScript(command string) (string, error) {
 		return "", err
 	}
 
+	defer tmpScript.Close()
+
 	_, err = tmpScript.Write([]byte(command))
 	if err != nil {
 		return "", err
