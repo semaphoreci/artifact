@@ -211,6 +211,38 @@ func Test__Push(t *testing.T) {
 		os.Remove("from-pipe.txt")
 	})
 
+	t.Run("push gzipped file from a pipe", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip()
+		}
+
+		// Run artifact push
+		command := fmt.Sprintf("docker image save alpine/helm | gzip | %s push job - -d docker-image.gz -v", getBinaryPath(rootFolder))
+		tmpScript, err := createTempScript(command)
+		if !assert.Nil(t, err) {
+			return
+		}
+
+		output, err := executeTempScript(tmpScript)
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Detected stdin, saving it to a temporary file...")
+		assert.Contains(t, output, "Successfully pushed artifact for current job")
+
+		// Pull uploaded artifact
+		output, err = executeCommand("pull", rootFolder, []string{"docker-image.gz"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+		assert.FileExists(t, "docker-image.gz")
+
+		// Validate that you can decompress the compressed pulled artifact
+		cmd := exec.Command("gzip", "-d", "docker-image.gz")
+		_, err = cmd.CombinedOutput()
+		assert.Nil(t, err)
+
+		os.Remove("docker-image")
+		os.Remove("docker-image.gz")
+	})
+
 	hub.Close()
 	storage.Close()
 }

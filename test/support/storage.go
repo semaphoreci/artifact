@@ -242,7 +242,7 @@ func (m *StorageMockServer) findFilesInDir(path string) ([]string, error) {
 			return err
 		}
 
-		relativePath := path[len(m.StorageDirectory)+1:]
+		relativePath := filepath.ToSlash(path)[len(m.StorageDirectory)+1:]
 
 		if d.IsDir() {
 			return nil
