@@ -58,7 +58,11 @@ func runYankTestCase(t *testing.T, testCase yankTestCase) {
 	os.Setenv(testCase.EnvVar, "1")
 
 	t.Run(testCase.Prefix+" single file", func(t *testing.T) {
-		hub, storage := prepareMocks(testCase)
+		hub, storage, err := prepareMocks(testCase)
+		if !assert.Nil(t, err) {
+			return
+		}
+
 		os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 
 		fileName := fmt.Sprintf("artifacts/%s/1/file1.txt", testCase.Prefix)
@@ -74,7 +78,11 @@ func runYankTestCase(t *testing.T, testCase yankTestCase) {
 	})
 
 	t.Run(testCase.Prefix+" single-level dir", func(t *testing.T) {
-		hub, storage := prepareMocks(testCase)
+		hub, storage, err := prepareMocks(testCase)
+		if !assert.Nil(t, err) {
+			return
+		}
+
 		os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 
 		dirName := fmt.Sprintf("artifacts/%s/1/one-level/", testCase.Prefix)
@@ -94,7 +102,11 @@ func runYankTestCase(t *testing.T, testCase yankTestCase) {
 	})
 
 	t.Run(testCase.Prefix+" two-levels dir", func(t *testing.T) {
-		hub, storage := prepareMocks(testCase)
+		hub, storage, err := prepareMocks(testCase)
+		if !assert.Nil(t, err) {
+			return
+		}
+
 		os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 
 		dirName := fmt.Sprintf("artifacts/%s/1/two-levels/", testCase.Prefix)
@@ -117,7 +129,11 @@ func runYankTestCase(t *testing.T, testCase yankTestCase) {
 	})
 
 	t.Run(testCase.Prefix+" two-levels dir sub directory", func(t *testing.T) {
-		hub, storage := prepareMocks(testCase)
+		hub, storage, err := prepareMocks(testCase)
+		if !assert.Nil(t, err) {
+			return
+		}
+
 		os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 
 		dirName := fmt.Sprintf("artifacts/%s/1/two-levels/", testCase.Prefix)
@@ -140,7 +156,11 @@ func runYankTestCase(t *testing.T, testCase yankTestCase) {
 	})
 
 	t.Run(testCase.Prefix+" overriding category id", func(t *testing.T) {
-		hub, storage := prepareMocks(testCase)
+		hub, storage, err := prepareMocks(testCase)
+		if !assert.Nil(t, err) {
+			return
+		}
+
 		os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 
 		fileName := fmt.Sprintf("artifacts/%s/2/another.txt", testCase.Prefix)
@@ -157,19 +177,28 @@ func runYankTestCase(t *testing.T, testCase yankTestCase) {
 	})
 }
 
-func prepareMocks(testCase yankTestCase) (*testsupport.HubMockServer, *testsupport.StorageMockServer) {
-	storageServer := testsupport.NewStorageMockServer()
-	storageServer.Init([]string{
-		fmt.Sprintf("artifacts/%s/1/file1.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/1/file2.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/1/one-level/file1.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/1/one-level/file2.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/1/two-levels/file1.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/1/two-levels/sub/file1.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/2/another.txt", testCase.Prefix),
+func prepareMocks(testCase yankTestCase) (*testsupport.HubMockServer, *testsupport.StorageMockServer, error) {
+	storageServer, err := testsupport.NewStorageMockServer()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = storageServer.Init([]testsupport.FileMock{
+		{Name: fmt.Sprintf("artifacts/%s/1/file1.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/1/file2.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/1/one-level/file1.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/1/one-level/file2.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/1/two-levels/file1.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/1/two-levels/sub/file1.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/2/another.txt", testCase.Prefix), Contents: "something"},
 	})
+
+	if err != nil {
+		storageServer.Close()
+		return nil, nil, err
+	}
 
 	hubServer := testsupport.NewHubMockServer(storageServer)
 	hubServer.Init()
-	return hubServer, storageServer
+	return hubServer, storageServer, nil
 }

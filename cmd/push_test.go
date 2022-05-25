@@ -51,8 +51,12 @@ func Test__Push(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		storageServer := testsupport.NewStorageMockServer()
-		storageServer.Init([]string{})
+		storageServer, err := testsupport.NewStorageMockServer()
+		if !assert.Nil(t, err) {
+			return
+		}
+
+		storageServer.Init([]testsupport.FileMock{})
 
 		hubServer := testsupport.NewHubMockServer(storageServer)
 		hubServer.Init()

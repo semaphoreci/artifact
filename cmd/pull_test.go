@@ -54,15 +54,19 @@ func Test__Pull(t *testing.T) {
 }
 
 func runForPullTestCase(t *testing.T, testCase pullTestCase) {
-	storageServer := testsupport.NewStorageMockServer()
-	storageServer.Init([]string{
-		fmt.Sprintf("artifacts/%s/1/file1.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/1/file2.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/1/one-level/file1.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/1/one-level/file2.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/1/two-levels/file1.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/1/two-levels/sub/file1.txt", testCase.Prefix),
-		fmt.Sprintf("artifacts/%s/2/another.txt", testCase.Prefix),
+	storageServer, err := testsupport.NewStorageMockServer()
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	storageServer.Init([]testsupport.FileMock{
+		{Name: fmt.Sprintf("artifacts/%s/1/file1.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/1/file2.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/1/one-level/file1.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/1/one-level/file2.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/1/two-levels/file1.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/1/two-levels/sub/file1.txt", testCase.Prefix), Contents: "something"},
+		{Name: fmt.Sprintf("artifacts/%s/2/another.txt", testCase.Prefix), Contents: "something"},
 	})
 
 	hubServer := testsupport.NewHubMockServer(storageServer)

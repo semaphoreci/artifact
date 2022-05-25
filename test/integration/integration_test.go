@@ -19,7 +19,11 @@ func Test__Pull(t *testing.T) {
 	testFolder := filepath.Dir(integrationFolder)
 	rootFolder := filepath.Dir(testFolder)
 
-	storage, hub := prepare()
+	storage, hub, err := prepare()
+	if !assert.Nil(t, err) {
+		return
+	}
+
 	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
 	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 	os.Setenv("SEMAPHORE_JOB_ID", "1")
@@ -109,7 +113,11 @@ func Test__Push(t *testing.T) {
 	testFolder := filepath.Dir(integrationFolder)
 	rootFolder := filepath.Dir(testFolder)
 
-	storage, hub := prepare()
+	storage, hub, err := prepare()
+	if !assert.Nil(t, err) {
+		return
+	}
+
 	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
 	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 	os.Setenv("SEMAPHORE_JOB_ID", "1")
@@ -181,6 +189,28 @@ func Test__Push(t *testing.T) {
 		os.RemoveAll(tmpDir)
 	})
 
+	t.Run("push using input from a pipe", func(t *testing.T) {
+		command := fmt.Sprintf("echo \"hello from pipe\" | %s push job - -d from-pipe.txt -v", getBinaryPath(rootFolder))
+		tmpScript, err := createTempScript(command)
+		if !assert.Nil(t, err) {
+			return
+		}
+
+		output, err := executeTempScript(tmpScript)
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Detected stdin, saving it to a temporary file...")
+		assert.Contains(t, output, "Successfully pushed artifact for current job")
+
+		output, err = executeCommand("pull", rootFolder, []string{"from-pipe.txt"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+
+		fileContents, _ := ioutil.ReadFile("from-pipe.txt")
+		assert.Equal(t, "hello from pipe\n", string(fileContents))
+
+		os.Remove("from-pipe.txt")
+	})
+
 	hub.Close()
 	storage.Close()
 }
@@ -191,7 +221,11 @@ func Test__Yank(t *testing.T) {
 	testFolder := filepath.Dir(integrationFolder)
 	rootFolder := filepath.Dir(testFolder)
 
-	storage, hub := prepare()
+	storage, hub, err := prepare()
+	if !assert.Nil(t, err) {
+		return
+	}
+
 	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
 	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 	os.Setenv("SEMAPHORE_JOB_ID", "1")
@@ -207,32 +241,67 @@ func Test__Yank(t *testing.T) {
 	storage.Close()
 }
 
-func prepare() (*testsupport.StorageMockServer, *testsupport.HubMockServer) {
-	storageServer := testsupport.NewStorageMockServer()
-	storageServer.Init([]string{
-		"artifacts/jobs/1/file1.txt",
-		"artifacts/jobs/1/file2.txt",
-		"artifacts/jobs/1/one-level/file1.txt",
-		"artifacts/jobs/1/one-level/file2.txt",
-		"artifacts/jobs/1/two-levels/file1.txt",
-		"artifacts/jobs/1/two-levels/sub/file1.txt",
-		"artifacts/jobs/2/another.txt",
+func prepare() (*testsupport.StorageMockServer, *testsupport.HubMockServer, error) {
+	storageServer, err := testsupport.NewStorageMockServer()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = storageServer.Init([]testsupport.FileMock{
+		{Name: "artifacts/jobs/1/file1.txt", Contents: "something"},
+		{Name: "artifacts/jobs/1/file2.txt", Contents: "something"},
+		{Name: "artifacts/jobs/1/one-level/file1.txt", Contents: "something"},
+		{Name: "artifacts/jobs/1/one-level/file2.txt", Contents: "something"},
+		{Name: "artifacts/jobs/1/two-levels/file1.txt", Contents: "something"},
+		{Name: "artifacts/jobs/1/two-levels/sub/file1.txt", Contents: "something"},
+		{Name: "artifacts/jobs/2/another.txt", Contents: "something"},
 	})
+	if err != nil {
+		storageServer.Close()
+		return nil, nil, err
+	}
 
 	hubServer := testsupport.NewHubMockServer(storageServer)
 	hubServer.Init()
 
-	return storageServer, hubServer
+	return storageServer, hubServer, nil
 }
 
 func executeCommand(command, rootFolder string, args []string) (string, error) {
 	binary := getBinaryPath(rootFolder)
 	fullArgs := []string{command, "job"}
 	fullArgs = append(fullArgs, args...)
+	fullArgs = append(fullArgs, "-v")
 
 	cmd := exec.Command(binary, fullArgs...)
 	output, err := cmd.CombinedOutput()
 
+	return string(output), err
+}
+
+func createTempScript(command string) (string, error) {
+	tmpScript, err := ioutil.TempFile("", "*.sh")
+	if err != nil {
+		return "", err
+	}
+
+	_, err = tmpScript.Write([]byte(command))
+	if err != nil {
+		return "", err
+	}
+
+	return tmpScript.Name(), nil
+}
+
+func executeTempScript(tmpScript string) (string, error) {
+	cmd := exec.Command("bash", tmpScript)
+
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("powershell", "-NoProfile", "-NonInteractive", "-File", tmpScript)
+	}
+
+	fmt.Printf("Executing command: %s\n", cmd.String())
+	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
 
