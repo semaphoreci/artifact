@@ -267,6 +267,8 @@ func (m *StorageMockServer) addFile(fileName string, reader io.ReadCloser) error
 		return err
 	}
 
+	defer newFile.Close()
+
 	if _, err := io.Copy(newFile, reader); err != nil {
 		return err
 	}
