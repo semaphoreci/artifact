@@ -209,7 +209,11 @@ func Test__Push(t *testing.T) {
 	})
 
 	t.Run("push using input from a pipe", func(t *testing.T) {
-		command := fmt.Sprintf("echo \"hello from pipe\" | %s push job - -d from-pipe.txt -v", getBinaryPath(rootFolder))
+		if runtime.GOOS == "windows" {
+			t.Skip()
+		}
+
+		command := fmt.Sprintf("echo -n \"hello from pipe\" | %s push job - -d from-pipe.txt -v", getBinaryPath(rootFolder))
 		tmpScript, err := createTempScript(command)
 		if !assert.Nil(t, err) {
 			return
@@ -225,9 +229,10 @@ func Test__Push(t *testing.T) {
 		assert.Contains(t, output, "Successfully pulled artifact for current job")
 
 		fileContents, _ := ioutil.ReadFile("from-pipe.txt")
-		assert.Equal(t, "hello from pipe\n", string(fileContents))
+		assert.Equal(t, "hello from pipe", string(fileContents))
 
 		os.Remove("from-pipe.txt")
+		os.Remove(tmpScript)
 	})
 
 	t.Run("push gzipped file from a pipe", func(t *testing.T) {
@@ -260,6 +265,7 @@ func Test__Push(t *testing.T) {
 
 		os.Remove("docker-image")
 		os.Remove("docker-image.gz")
+		os.Remove(tmpScript)
 	})
 
 	hub.Close()
@@ -331,12 +337,7 @@ func executeCommand(command, rootFolder string, args []string) (string, error) {
 }
 
 func createTempScript(command string) (string, error) {
-	filePattern := "*.sh"
-	if runtime.GOOS == "windows" {
-		filePattern = "*.ps1"
-	}
-
-	tmpScript, err := ioutil.TempFile("", filePattern)
+	tmpScript, err := ioutil.TempFile("", "*.sh")
 	if err != nil {
 		return "", err
 	}
@@ -353,20 +354,10 @@ func createTempScript(command string) (string, error) {
 
 func executeTempScript(tmpScript string) (string, error) {
 	cmd := exec.Command("bash", tmpScript)
-
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("powershell", "-NoProfile", "-NonInteractive", "-File", tmpScript)
-	}
-
-	fmt.Printf("Executing command: %s\n", cmd.String())
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
 
 func getBinaryPath(rootFolder string) string {
-	if runtime.GOOS == "windows" {
-		return fmt.Sprintf("%s/artifact.exe", rootFolder)
-	}
-
 	return fmt.Sprintf("%s/artifact", rootFolder)
 }
