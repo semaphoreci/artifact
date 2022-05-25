@@ -55,6 +55,7 @@ func NewPullJobCmd() *cobra.Command {
 			paths, err := runPullForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pulling artifact: %v\n", err)
+				log.Error("Please check if the artifact you are trying to pull exists.\n")
 				errutil.Exit(1)
 				return
 			}
@@ -88,6 +89,7 @@ func NewPullWorkflowCmd() *cobra.Command {
 			paths, err := runPullForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pulling artifact: %v\n", err)
+				log.Error("Please check if the artifact you are trying to pull exists.\n")
 				errutil.Exit(1)
 				return
 			}
@@ -121,6 +123,7 @@ func NewPullProjectCmd() *cobra.Command {
 			paths, err := runPullForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pulling artifact: %v\n", err)
+				log.Error("Please check if the artifact you are trying to pull exists.\n")
 				errutil.Exit(1)
 				return
 			}

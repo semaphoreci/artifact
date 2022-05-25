@@ -24,6 +24,13 @@ func Test__Pull(t *testing.T) {
 	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 	os.Setenv("SEMAPHORE_JOB_ID", "1")
 
+	t.Run("missing file", func(t *testing.T) {
+		output, err := executeCommand("pull", rootFolder, []string{"notfound.txt"})
+		assert.NotNil(t, err)
+		assert.Contains(t, output, "Error pulling artifact")
+		assert.Contains(t, output, "Please check if the artifact you are trying to pull exists")
+	})
+
 	t.Run("pulling single file that exists locally throws error", func(t *testing.T) {
 		output, err := executeCommand("pull", rootFolder, []string{"file1.txt"})
 		assert.Nil(t, err)
@@ -149,6 +156,51 @@ func Test__Push(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Contains(t, output, "Successfully pushed artifact for current job")
 		os.RemoveAll(tmpDir)
+	})
+
+	t.Run("pushing directory with one single file that exists remotely throws error", func(t *testing.T) {
+		tmpDir, _ := ioutil.TempDir("", "")
+		_ = ioutil.WriteFile(fmt.Sprintf("%s/file111.txt", tmpDir), []byte("file111"), 0755)
+		_ = ioutil.WriteFile(fmt.Sprintf("%s/file2.txt", tmpDir), []byte("file2"), 0755)
+
+		output, err := executeCommand("push", rootFolder, []string{tmpDir, "-d", "one-level"})
+		assert.NotNil(t, err)
+		assert.Contains(t, output, "Error pushing artifact")
+		assert.Contains(t, output, "'artifacts/jobs/1/one-level/file2.txt' already exists in the remote storage; delete it first, or use --force flag")
+		os.RemoveAll(tmpDir)
+	})
+
+	t.Run("pushing directory with one single file that exists remotely forcefully works", func(t *testing.T) {
+		tmpDir, _ := ioutil.TempDir("", "")
+		_ = ioutil.WriteFile(fmt.Sprintf("%s/file111.txt", tmpDir), []byte("file111"), 0755)
+		_ = ioutil.WriteFile(fmt.Sprintf("%s/file2.txt", tmpDir), []byte("file2"), 0755)
+
+		output, err := executeCommand("push", rootFolder, []string{tmpDir, "-d", "one-level", "-f"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pushed artifact for current job")
+		os.RemoveAll(tmpDir)
+	})
+
+	hub.Close()
+	storage.Close()
+}
+
+func Test__Yank(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	integrationFolder := filepath.Dir(file)
+	testFolder := filepath.Dir(integrationFolder)
+	rootFolder := filepath.Dir(testFolder)
+
+	storage, hub := prepare()
+	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
+	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
+	os.Setenv("SEMAPHORE_JOB_ID", "1")
+
+	t.Run("missing file", func(t *testing.T) {
+		output, err := executeCommand("yank", rootFolder, []string{"notfound.txt"})
+		assert.NotNil(t, err)
+		assert.Contains(t, output, "Error yanking artifact")
+		assert.Contains(t, output, "Please check if the artifact you are trying to yank exists")
 	})
 
 	hub.Close()
