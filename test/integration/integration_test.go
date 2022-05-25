@@ -25,11 +25,11 @@ func Test__Pull(t *testing.T) {
 	os.Setenv("SEMAPHORE_JOB_ID", "1")
 
 	t.Run("pulling single file that exists locally throws error", func(t *testing.T) {
-		output, err := executePull(rootFolder, []string{"file1.txt"})
+		output, err := executeCommand("pull", rootFolder, []string{"file1.txt"})
 		assert.Nil(t, err)
 		assert.Contains(t, output, "Successfully pulled artifact for current job")
 
-		output, err = executePull(rootFolder, []string{"file1.txt"})
+		output, err = executeCommand("pull", rootFolder, []string{"file1.txt"})
 		assert.NotNil(t, err)
 		assert.Contains(t, output, "Error pulling artifact")
 		assert.Contains(t, output, "'file1.txt' already exists locally; delete it first, or use --force flag")
@@ -37,22 +37,22 @@ func Test__Pull(t *testing.T) {
 	})
 
 	t.Run("pulling single file that exists locally forcefully works", func(t *testing.T) {
-		output, err := executePull(rootFolder, []string{"file1.txt"})
+		output, err := executeCommand("pull", rootFolder, []string{"file1.txt"})
 		assert.Nil(t, err)
 		assert.Contains(t, output, "Successfully pulled artifact for current job")
 
-		output, err = executePull(rootFolder, []string{"file1.txt", "-f"})
+		output, err = executeCommand("pull", rootFolder, []string{"file1.txt", "-f"})
 		assert.Nil(t, err)
 		assert.Contains(t, output, "Successfully pulled artifact for current job")
 		os.Remove("file1.txt")
 	})
 
 	t.Run("pulling directory that exists locally throws error", func(t *testing.T) {
-		output, err := executePull(rootFolder, []string{"one-level"})
+		output, err := executeCommand("pull", rootFolder, []string{"one-level"})
 		assert.Nil(t, err)
 		assert.Contains(t, output, "Successfully pulled artifact for current job")
 
-		output, err = executePull(rootFolder, []string{"one-level"})
+		output, err = executeCommand("pull", rootFolder, []string{"one-level"})
 		assert.NotNil(t, err)
 		assert.Contains(t, output, "Error pulling artifact")
 		assert.Contains(t, output, "'one-level/file1.txt' already exists locally; delete it first, or use --force flag")
@@ -63,7 +63,7 @@ func Test__Pull(t *testing.T) {
 		assert.Nil(t, os.Mkdir("one-level", 0755))
 		ioutil.WriteFile("one-level/file2.txt", []byte("file2"), 0755)
 
-		output, err := executePull(rootFolder, []string{"one-level"})
+		output, err := executeCommand("pull", rootFolder, []string{"one-level"})
 		assert.NotNil(t, err)
 		assert.Contains(t, output, "Error pulling artifact")
 		assert.Contains(t, output, "'one-level/file2.txt' already exists locally; delete it first, or use --force flag")
@@ -74,7 +74,7 @@ func Test__Pull(t *testing.T) {
 		assert.Nil(t, os.Mkdir("one-level", 0755))
 		ioutil.WriteFile("one-level/file2.txt", []byte("file2"), 0755)
 
-		output, err := executePull(rootFolder, []string{"one-level/file1.txt"})
+		output, err := executeCommand("pull", rootFolder, []string{"one-level/file1.txt"})
 		assert.Nil(t, err)
 		assert.Contains(t, output, "Successfully pulled artifact for current job")
 		os.Remove("file1.txt")
@@ -82,14 +82,73 @@ func Test__Pull(t *testing.T) {
 	})
 
 	t.Run("pulling directory that exists locally forcefully works", func(t *testing.T) {
-		output, err := executePull(rootFolder, []string{"one-level"})
+		output, err := executeCommand("pull", rootFolder, []string{"one-level"})
 		assert.Nil(t, err)
 		assert.Contains(t, output, "Successfully pulled artifact for current job")
 
-		output, err = executePull(rootFolder, []string{"one-level", "-f"})
+		output, err = executeCommand("pull", rootFolder, []string{"one-level", "-f"})
 		assert.Nil(t, err)
 		assert.Contains(t, output, "Successfully pulled artifact for current job")
 		os.RemoveAll("one-level")
+	})
+
+	hub.Close()
+	storage.Close()
+}
+
+func Test__Push(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	integrationFolder := filepath.Dir(file)
+	testFolder := filepath.Dir(integrationFolder)
+	rootFolder := filepath.Dir(testFolder)
+
+	storage, hub := prepare()
+	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
+	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
+	os.Setenv("SEMAPHORE_JOB_ID", "1")
+
+	t.Run("pushing single file that exists remotely throws error", func(t *testing.T) {
+		tmpFile, _ := ioutil.TempFile("", "")
+		tmpFile.Write([]byte("file1"))
+
+		output, err := executeCommand("push", rootFolder, []string{tmpFile.Name(), "-d", "file1.txt"})
+		assert.NotNil(t, err)
+		assert.Contains(t, output, "Error pushing artifact")
+		assert.Contains(t, output, "'artifacts/jobs/1/file1.txt' already exists in the remote storage; delete it first, or use --force flag")
+		os.Remove(tmpFile.Name())
+	})
+
+	t.Run("pushing single file that exists remotely forcefully works", func(t *testing.T) {
+		tmpFile, _ := ioutil.TempFile("", "")
+		tmpFile.Write([]byte("file1"))
+
+		output, err := executeCommand("push", rootFolder, []string{tmpFile.Name(), "-d", "file1.txt", "-f"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pushed artifact for current job")
+		os.Remove(tmpFile.Name())
+	})
+
+	t.Run("pushing whole directory that exists remotely throws error", func(t *testing.T) {
+		tmpDir, _ := ioutil.TempDir("", "")
+		_ = ioutil.WriteFile(fmt.Sprintf("%s/file1.txt", tmpDir), []byte("file1"), 0755)
+		_ = ioutil.WriteFile(fmt.Sprintf("%s/file2.txt", tmpDir), []byte("file2"), 0755)
+
+		output, err := executeCommand("push", rootFolder, []string{tmpDir, "-d", "one-level"})
+		assert.NotNil(t, err)
+		assert.Contains(t, output, "Error pushing artifact")
+		assert.Contains(t, output, "'artifacts/jobs/1/one-level/file1.txt' already exists in the remote storage; delete it first, or use --force flag")
+		os.RemoveAll(tmpDir)
+	})
+
+	t.Run("pushing whole directory that exists remotely forcefully works", func(t *testing.T) {
+		tmpDir, _ := ioutil.TempDir("", "")
+		_ = ioutil.WriteFile(fmt.Sprintf("%s/file1.txt", tmpDir), []byte("file1"), 0755)
+		_ = ioutil.WriteFile(fmt.Sprintf("%s/file2.txt", tmpDir), []byte("file2"), 0755)
+
+		output, err := executeCommand("push", rootFolder, []string{tmpDir, "-d", "one-level", "-f"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pushed artifact for current job")
+		os.RemoveAll(tmpDir)
 	})
 
 	hub.Close()
@@ -114,10 +173,9 @@ func prepare() (*testsupport.StorageMockServer, *testsupport.HubMockServer) {
 	return storageServer, hubServer
 }
 
-func executePull(rootFolder string, args []string) (string, error) {
+func executeCommand(command, rootFolder string, args []string) (string, error) {
 	binary := getBinaryPath(rootFolder)
-
-	fullArgs := []string{"pull", "job"}
+	fullArgs := []string{command, "job"}
 	fullArgs = append(fullArgs, args...)
 
 	cmd := exec.Command(binary, fullArgs...)

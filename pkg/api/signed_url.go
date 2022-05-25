@@ -50,7 +50,7 @@ func (u *SignedURL) head(client *http.Client, artifact *Artifact) error {
 
 	log.Debugf("HEAD request got %d response.\n", resp.StatusCode)
 	if common.IsStatusOK(resp.StatusCode) {
-		return fmt.Errorf("'%s' already exists in the remote storage; delete it first, or use --force flag", artifact.LocalPath)
+		return fmt.Errorf("'%s' already exists in the remote storage; delete it first, or use --force flag", artifact.RemotePath)
 	}
 
 	return nil
