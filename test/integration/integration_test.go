@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test__PullForcifully(t *testing.T) {
+func Test__Pull(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	integrationFolder := filepath.Dir(file)
 	testFolder := filepath.Dir(integrationFolder)
@@ -23,17 +24,76 @@ func Test__PullForcifully(t *testing.T) {
 	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
 	os.Setenv("SEMAPHORE_JOB_ID", "1")
 
-	_, err := executePull(rootFolder, "file1.txt")
-	assert.Nil(t, err)
-	// TODO: assert output
+	t.Run("pulling single file that exists locally throws error", func(t *testing.T) {
+		output, err := executePull(rootFolder, []string{"file1.txt"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
 
-	_, err = executePull(rootFolder, "file1.txt")
-	assert.NotNil(t, err)
-	// TODO: assert output
+		output, err = executePull(rootFolder, []string{"file1.txt"})
+		assert.NotNil(t, err)
+		assert.Contains(t, output, "Error pulling artifact")
+		assert.Contains(t, output, "'file1.txt' already exists locally; delete it first, or use --force flag")
+		os.Remove("file1.txt")
+	})
+
+	t.Run("pulling single file that exists locally forcefully works", func(t *testing.T) {
+		output, err := executePull(rootFolder, []string{"file1.txt"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+
+		output, err = executePull(rootFolder, []string{"file1.txt", "-f"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+		os.Remove("file1.txt")
+	})
+
+	t.Run("pulling directory that exists locally throws error", func(t *testing.T) {
+		output, err := executePull(rootFolder, []string{"one-level"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+
+		output, err = executePull(rootFolder, []string{"one-level"})
+		assert.NotNil(t, err)
+		assert.Contains(t, output, "Error pulling artifact")
+		assert.Contains(t, output, "'one-level/file1.txt' already exists locally; delete it first, or use --force flag")
+		os.RemoveAll("one-level")
+	})
+
+	t.Run("pulling directory that has one single file locally throws error", func(t *testing.T) {
+		assert.Nil(t, os.Mkdir("one-level", 0755))
+		ioutil.WriteFile("one-level/file2.txt", []byte("file2"), 0755)
+
+		output, err := executePull(rootFolder, []string{"one-level"})
+		assert.NotNil(t, err)
+		assert.Contains(t, output, "Error pulling artifact")
+		assert.Contains(t, output, "'one-level/file2.txt' already exists locally; delete it first, or use --force flag")
+		os.RemoveAll("one-level")
+	})
+
+	t.Run("pulling only file from directory that doesn't exist locally works", func(t *testing.T) {
+		assert.Nil(t, os.Mkdir("one-level", 0755))
+		ioutil.WriteFile("one-level/file2.txt", []byte("file2"), 0755)
+
+		output, err := executePull(rootFolder, []string{"one-level/file1.txt"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+		os.Remove("file1.txt")
+		os.RemoveAll("one-level")
+	})
+
+	t.Run("pulling directory that exists locally forcefully works", func(t *testing.T) {
+		output, err := executePull(rootFolder, []string{"one-level"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+
+		output, err = executePull(rootFolder, []string{"one-level", "-f"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+		os.RemoveAll("one-level")
+	})
 
 	hub.Close()
 	storage.Close()
-	os.Remove("file1.txt")
 }
 
 func prepare() (*testsupport.StorageMockServer, *testsupport.HubMockServer) {
@@ -54,10 +114,15 @@ func prepare() (*testsupport.StorageMockServer, *testsupport.HubMockServer) {
 	return storageServer, hubServer
 }
 
-func executePull(rootFolder, fileName string) (string, error) {
+func executePull(rootFolder string, args []string) (string, error) {
 	binary := getBinaryPath(rootFolder)
-	cmd := exec.Command(binary, "pull", "job", fileName)
+
+	fullArgs := []string{"pull", "job"}
+	fullArgs = append(fullArgs, args...)
+
+	cmd := exec.Command(binary, fullArgs...)
 	output, err := cmd.CombinedOutput()
+
 	return string(output), err
 }
 
