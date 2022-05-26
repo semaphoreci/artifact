@@ -5,8 +5,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -77,15 +75,15 @@ type ResolvedPath struct {
 	Destination string
 }
 
-func (r *PathResolver) Resolve(operation, source, destination string) (*ResolvedPath, error) {
+func (r *PathResolver) Resolve(operation, source, destinationOverride string) (*ResolvedPath, error) {
 	source = filepath.ToSlash(source)
-	destination = filepath.ToSlash(destination)
+	destinationOverride = filepath.ToSlash(destinationOverride)
 
 	switch operation {
 	case OperationPush:
-		return r.Push(source, destination), nil
+		return r.Push(source, destinationOverride), nil
 	case OperationPull:
-		return r.Pull(source, destination), nil
+		return r.Pull(source, destinationOverride), nil
 	case OperationYank:
 		return r.Yank(source), nil
 	default:
@@ -93,27 +91,16 @@ func (r *PathResolver) Resolve(operation, source, destination string) (*Resolved
 	}
 }
 
-func (r *PathResolver) Pull(source, destination string) *ResolvedPath {
+func (r *PathResolver) Pull(source, destinationOverride string) *ResolvedPath {
 	remoteSource := ToRelative(source)
-	localDestination := path.Clean(pathFromSource(destination, remoteSource))
+	localDestination := path.Clean(pathFromSource(destinationOverride, remoteSource))
 	remoteSource = r.PrefixedPath(remoteSource)
-
-	log.Debug("Resolved paths.\n")
-	log.Debugf("* Local destination: %s\n", localDestination)
-	log.Debugf("* Remote source: %s\n", remoteSource)
-
 	return &ResolvedPath{Source: remoteSource, Destination: localDestination}
 }
 
-func (r *PathResolver) Push(source, destination string) *ResolvedPath {
-	remoteDestination := ToRelative(destination)
-	remoteDestination = r.PrefixedPath(pathFromSource(remoteDestination, source))
+func (r *PathResolver) Push(source, destinationOverride string) *ResolvedPath {
+	remoteDestination := r.PrefixedPath(pathFromSource(ToRelative(destinationOverride), source))
 	localSource := path.Clean(source)
-
-	log.Debug("Resolved paths.\n")
-	log.Debugf("* Remote destination: '%s'\n", remoteDestination)
-	log.Debugf("* Local source: '%s'\n", localSource)
-
 	return &ResolvedPath{
 		Source:      localSource,
 		Destination: remoteDestination,
@@ -122,10 +109,6 @@ func (r *PathResolver) Push(source, destination string) *ResolvedPath {
 
 func (r *PathResolver) Yank(file string) *ResolvedPath {
 	prefixedFile := r.PrefixedPath(ToRelative(file))
-
-	log.Debug("Resolved paths.\n")
-	log.Debugf("* Remote file: %s\n", prefixedFile)
-
 	return &ResolvedPath{Source: prefixedFile}
 }
 
@@ -140,11 +123,11 @@ func (r *PathResolver) PrefixedPath(filepath string) string {
 	return path.Join("artifacts", r.ResourceTypePlural, r.ResourceIdentifier, filepath)
 }
 
-// If no destination is set, we take the destination path from the source.
-func pathFromSource(destination, source string) string {
-	if destination == "" {
+// If no destination override is set, we take the destination path from the source.
+func pathFromSource(destinationOverride, source string) string {
+	if destinationOverride == "" {
 		return path.Base(source)
 	}
 
-	return destination
+	return destinationOverride
 }

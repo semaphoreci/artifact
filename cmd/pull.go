@@ -20,7 +20,7 @@ to use them in a later phase, debug, or getting the results.`,
 
 // Maybe use an api.Artifact?
 func runPullForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, error) {
-	localDestination, err := cmd.Flags().GetString("destination")
+	destinationOverride, err := cmd.Flags().GetString("destination")
 	errutil.Check(err)
 
 	force, err := cmd.Flags().GetBool("force")
@@ -29,13 +29,11 @@ func runPullForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 	hubClient, err := hub.NewClient()
 	errutil.Check(err)
 
-	remoteSource := args[0]
-	paths, err := resolver.Resolve(files.OperationPull, remoteSource, localDestination)
-	if err != nil {
-		return nil, err
-	}
-
-	return paths, storage.Pull(hubClient, paths.Destination, paths.Source, force)
+	return storage.Pull(hubClient, resolver, storage.PullOptions{
+		SourcePath:          args[0],
+		DestinationOverride: destinationOverride,
+		Force:               force,
+	})
 }
 
 func NewPullJobCmd() *cobra.Command {

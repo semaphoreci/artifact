@@ -42,7 +42,7 @@ func runPushForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 	localSource, err := getSrc(cmd, args)
 	errutil.Check(err)
 
-	remoteDestination, err := cmd.Flags().GetString("destination")
+	destinationOverride, err := cmd.Flags().GetString("destination")
 	errutil.Check(err)
 
 	force, err := cmd.Flags().GetBool("force")
@@ -54,12 +54,11 @@ func runPushForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 		displayWarningThatExpireInIsNoLongerSupported()
 	}
 
-	paths, err := resolver.Resolve(files.OperationPush, localSource, remoteDestination)
-	if err != nil {
-		return nil, err
-	}
-
-	return paths, storage.Push(hubClient, paths.Destination, paths.Source, force)
+	return storage.Push(hubClient, resolver, storage.PushOptions{
+		SourcePath:          localSource,
+		DestinationOverride: destinationOverride,
+		Force:               force,
+	})
 }
 
 func displayWarningThatExpireInIsNoLongerSupported() {

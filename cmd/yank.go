@@ -22,6 +22,7 @@ func runYankForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 	hubClient, err := hub.NewClient()
 	errutil.Check(err)
 
+	// The yank operation does not have a destination override
 	paths, err := resolver.Resolve(files.OperationYank, args[0], "")
 	errutil.Check(err)
 

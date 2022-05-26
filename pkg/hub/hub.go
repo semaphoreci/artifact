@@ -22,10 +22,10 @@ type Client struct {
 	HttpClient *http.Client
 }
 
-type generateSignedURLsRequestType int
+type GenerateSignedURLsRequestType int
 
 const (
-	GenerateSignedURLsRequestPUSH generateSignedURLsRequestType = iota
+	GenerateSignedURLsRequestPUSH GenerateSignedURLsRequestType = iota
 	GenerateSignedURLsRequestPUSHFORCE
 	GenerateSignedURLsRequestPULL
 	GenerateSignedURLsRequestYANK
@@ -33,7 +33,7 @@ const (
 
 type GenerateSignedURLsRequest struct {
 	Paths []string                      `json:"paths,omitempty"`
-	Type  generateSignedURLsRequestType `json:"type,omitempty"`
+	Type  GenerateSignedURLsRequestType `json:"type,omitempty"`
 }
 
 type GenerateSignedURLsResponse struct {
@@ -69,7 +69,7 @@ func NewClient() (*Client, error) {
 	}, nil
 }
 
-func (c *Client) GenerateSignedURLs(remotePaths []string, requestType generateSignedURLsRequestType) (*GenerateSignedURLsResponse, error) {
+func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSignedURLsRequestType) (*GenerateSignedURLsResponse, error) {
 	request := &GenerateSignedURLsRequest{
 		Paths: remotePaths,
 		Type:  requestType,
