@@ -51,7 +51,6 @@ func buildArtifacts(signedURLs []*api.SignedURL, paths *files.ResolvedPath, forc
 			return nil, err
 		}
 
-		// TODO: figure out if there's a better way to find this localPath
 		localPath := path.Join(paths.Destination, obj[len(paths.Source):])
 
 		if !force {

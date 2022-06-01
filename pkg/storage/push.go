@@ -83,8 +83,6 @@ func LocateArtifacts(paths *files.ResolvedPath) ([]*api.Artifact, error) {
 		}
 
 		name := filepath.ToSlash(filename)
-
-		// TODO: figure out if RemotePath can be determined in any other way, this is very confusing
 		items = append(items, &api.Artifact{
 			RemotePath: path.Join(paths.Destination, name[len(paths.Source):]),
 			LocalPath:  filename,

@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-const ExpirePrefix = "var/expires-in/"
-
 // isFile returns if the given path points to a file in the local file system.
 func isFile(filename string) (bool, error) {
 	fi, err := os.Stat(filename)

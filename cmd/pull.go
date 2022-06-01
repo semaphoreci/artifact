@@ -18,7 +18,6 @@ artifact push. With artifact pull you can download them to the current directory
 to use them in a later phase, debug, or getting the results.`,
 }
 
-// Maybe use an api.Artifact?
 func runPullForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, error) {
 	destinationOverride, err := cmd.Flags().GetString("destination")
 	errutil.Check(err)
