@@ -1,15 +1,12 @@
 package cmd
 
 import (
-	"os"
-	"path/filepath"
-
-	"github.com/semaphoreci/artifact/pkg/gcs"
-	errutil "github.com/semaphoreci/artifact/pkg/util/err"
-	"github.com/semaphoreci/artifact/pkg/util/log"
-	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
+	errutil "github.com/semaphoreci/artifact/pkg/errors"
+	"github.com/semaphoreci/artifact/pkg/files"
+	"github.com/semaphoreci/artifact/pkg/hub"
+	"github.com/semaphoreci/artifact/pkg/storage"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 // pullCmd represents the pull command
@@ -21,88 +18,128 @@ artifact push. With artifact pull you can download them to the current directory
 to use them in a later phase, debug, or getting the results.`,
 }
 
-func runPullForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
-	err := pathutil.InitPathID(category, catID)
-	errutil.Check(err)
-	src := args[0]
-
-	dst, err := cmd.Flags().GetString("destination")
+func runPullForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, error) {
+	destinationOverride, err := cmd.Flags().GetString("destination")
 	errutil.Check(err)
 
 	force, err := cmd.Flags().GetBool("force")
 	errutil.Check(err)
 
-	dst, src = gcs.PullPaths(filepath.ToSlash(dst), filepath.ToSlash(src))
-	if ok := gcs.PullGCS(dst, src, force); !ok {
-		os.Exit(1) // error already logged
+	hubClient, err := hub.NewClient()
+	errutil.Check(err)
+
+	return storage.Pull(hubClient, resolver, storage.PullOptions{
+		SourcePath:          args[0],
+		DestinationOverride: destinationOverride,
+		Force:               force,
+	})
+}
+
+func NewPullJobCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "job [SOURCE PATH]",
+		Short: "Downloads a job file or directory from the storage.",
+		Long:  ``,
+		Args:  cobra.ExactArgs(1),
+
+		Run: func(cmd *cobra.Command, args []string) {
+			jobId, err := cmd.Flags().GetString("job-id")
+			errutil.Check(err)
+
+			resolver, err := files.NewPathResolver(files.ResourceTypeJob, jobId)
+			errutil.Check(err)
+
+			paths, err := runPullForCategory(cmd, args, resolver)
+			if err != nil {
+				log.Errorf("Error pulling artifact: %v\n", err)
+				log.Error("Please check if the artifact you are trying to pull exists.\n")
+				errutil.Exit(1)
+				return
+			}
+
+			log.Info("Successfully pulled artifact for current job.\n")
+			log.Infof("* Remote source: '%s'.\n", paths.Source)
+			log.Infof("* Local destination: '%s'.\n", paths.Destination)
+		},
 	}
-	return dst, src
+
+	cmd.Flags().StringP("destination", "d", "", "rename the file while uploading")
+	cmd.Flags().BoolP("force", "f", false, "force overwrite")
+	cmd.Flags().StringP("job-id", "j", "", "set explicit job id")
+	return cmd
 }
 
-// PullJobCmd is the subcommand for "artifact pull job ..."
-var PullJobCmd = &cobra.Command{
-	Use:   "job [SOURCE PATH]",
-	Short: "Downloads a job file or directory from the storage.",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+func NewPullWorkflowCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "workflow [SOURCE PATH]",
+		Short: "Downloads a workflow file or directory from the storage.",
+		Long:  ``,
+		Args:  cobra.ExactArgs(1),
 
-	Run: func(cmd *cobra.Command, args []string) {
-		catID, err := cmd.Flags().GetString("job-id")
-		errutil.Check(err)
-		dst, src := runPullForCategory(cmd, args, pathutil.JOB, catID)
-		log.Info("successful pull for current job", zap.String("source", src),
-			zap.String("destination", dst))
-	},
+		Run: func(cmd *cobra.Command, args []string) {
+			workflowId, err := cmd.Flags().GetString("workflow-id")
+			errutil.Check(err)
+
+			resolver, err := files.NewPathResolver(files.ResourceTypeWorkflow, workflowId)
+			errutil.Check(err)
+
+			paths, err := runPullForCategory(cmd, args, resolver)
+			if err != nil {
+				log.Errorf("Error pulling artifact: %v\n", err)
+				log.Error("Please check if the artifact you are trying to pull exists.\n")
+				errutil.Exit(1)
+				return
+			}
+
+			log.Info("Successfully pulled artifact for current workflow.\n")
+			log.Infof("* Remote source: '%s'.\n", paths.Source)
+			log.Infof("* Local destination: '%s'.\n", paths.Destination)
+		},
+	}
+
+	cmd.Flags().StringP("destination", "d", "", "rename the file while uploading")
+	cmd.Flags().BoolP("force", "f", false, "force overwrite")
+	cmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
+	return cmd
 }
 
-// PullWorkflowCmd is the subcommand for "artifact pull workflow ..."
-var PullWorkflowCmd = &cobra.Command{
-	Use:   "workflow [SOURCE PATH]",
-	Short: "Downloads a workflow file or directory from the storage.",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+func NewPullProjectCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "project [SOURCE PATH]",
+		Short: "Downloads a project file or directory from the storage.",
+		Long:  ``,
+		Args:  cobra.ExactArgs(1),
 
-	Run: func(cmd *cobra.Command, args []string) {
-		catID, err := cmd.Flags().GetString("workflow-id")
-		errutil.Check(err)
-		dst, src := runPullForCategory(cmd, args, pathutil.WORKFLOW, catID)
-		log.Info("successful pull for current workflow", zap.String("source", src),
-			zap.String("destination", dst))
-	},
-}
+		Run: func(cmd *cobra.Command, args []string) {
+			projectId, err := cmd.Flags().GetString("project-id")
+			errutil.Check(err)
 
-// PullProjectCmd is the subcommand for "artifact pull project ..."
-var PullProjectCmd = &cobra.Command{
-	Use:   "project [SOURCE PATH]",
-	Short: "Downloads a project file or directory from the storage.",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+			resolver, err := files.NewPathResolver(files.ResourceTypeProject, projectId)
+			errutil.Check(err)
 
-	Run: func(cmd *cobra.Command, args []string) {
-		dst, src := runPullForCategory(cmd, args, pathutil.PROJECT, "")
-		log.Info("successful pull for current project", zap.String("source", src),
-			zap.String("destination", dst))
-	},
+			paths, err := runPullForCategory(cmd, args, resolver)
+			if err != nil {
+				log.Errorf("Error pulling artifact: %v\n", err)
+				log.Error("Please check if the artifact you are trying to pull exists.\n")
+				errutil.Exit(1)
+				return
+			}
+
+			log.Info("Successfully pulled artifact for current project.\n")
+			log.Infof("* Remote source: '%s'.\n", paths.Source)
+			log.Infof("* Local destination: '%s'.\n", paths.Destination)
+		},
+	}
+
+	cmd.Flags().StringP("destination", "d", "", "rename the file while uploading")
+	cmd.Flags().BoolP("force", "f", false, "force overwrite")
+	cmd.Flags().StringP("project-id", "p", "", "set explicit project id")
+	return cmd
 }
 
 func init() {
 	rootCmd.AddCommand(pullCmd)
-
-	pullCmd.AddCommand(PullJobCmd)
-	pullCmd.AddCommand(PullWorkflowCmd)
-	pullCmd.AddCommand(PullProjectCmd)
-
-	desc := "rename the file while uploading"
-	PullJobCmd.Flags().StringP("destination", "d", "", desc)
-	PullWorkflowCmd.Flags().StringP("destination", "d", "", desc)
-	PullProjectCmd.Flags().StringP("destination", "d", "", desc)
-
-	desc = "force overwrite"
-	PullJobCmd.Flags().BoolP("force", "f", false, desc)
-	PullWorkflowCmd.Flags().BoolP("force", "f", false, desc)
-	PullProjectCmd.Flags().BoolP("force", "f", false, desc)
-
-	PullJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
-	PullWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
-	PullProjectCmd.Flags().StringP("project-id", "p", "", "set explicit project id")
+	pullCmd.AddCommand(NewPullJobCmd())
+	pullCmd.AddCommand(NewPullWorkflowCmd())
+	pullCmd.AddCommand(NewPullProjectCmd())
 }

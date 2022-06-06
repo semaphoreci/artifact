@@ -11,18 +11,18 @@ blocks:
         - name: GO111MODULE
           value: "on"
       jobs:
-      - name: Unit tests
-        commands:
-          - checkout
-          - make go.install
-          - "export PATH=/usr/local/go/bin:$PATH"
-          - "export GOPATH=~/go"
-          - "export GOROOT=/usr/local/go"
-          - env
-          - go version
-          - make go.get
-          - make build
-          - make test
+        - name: Unit tests
+          commands:
+            - checkout
+            - sem-version go 1.16
+            - go install gotest.tools/gotestsum@latest
+            - make go.get
+            - make build
+            - make test
+      epilogue:
+        always:
+          commands:
+            - test-results publish junit-report.xml
 
 promotions:
   - name: "Release"

@@ -22,6 +22,6 @@ func Exit(code int) {
 	if flag.Lookup("test.v") == nil {
 		os.Exit(1)
 	} else {
-		panic(fmt.Sprintf("exit %d", code))
+		fmt.Printf("Exit %d\n", code)
 	}
 }
