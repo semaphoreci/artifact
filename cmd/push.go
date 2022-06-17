@@ -125,7 +125,7 @@ func NewPushWorkflowCmd() *cobra.Command {
 				return
 			}
 
-			log.Info("Successfully pushed artifact for current job.\n")
+			log.Info("Successfully pushed artifact for current workflow.\n")
 			log.Infof("* Local source: %s.\n", paths.Source)
 			log.Infof("* Remote destination: %s.\n", paths.Destination)
 		},
@@ -160,7 +160,7 @@ func NewPushProjectCmd() *cobra.Command {
 				return
 			}
 
-			log.Info("Successfully pushed artifact for current job.\n")
+			log.Info("Successfully pushed artifact for current project.\n")
 			log.Infof("* Local source: %s.\n", paths.Source)
 			log.Infof("* Remote destination: %s.\n", paths.Destination)
 		},
