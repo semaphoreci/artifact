@@ -5,25 +5,6 @@ agent:
     type: e1-standard-2
     os_image: ubuntu1804
 blocks:
-  - name: "Build & Test"
-    task:
-      env_vars:
-        - name: GO111MODULE
-          value: "on"
-      jobs:
-        - name: Unit tests
-          commands:
-            - checkout
-            - sem-version go 1.16
-            - go install gotest.tools/gotestsum@latest
-            - make go.get
-            - make build
-            - make test
-      epilogue:
-        always:
-          commands:
-            - test-results publish junit-report.xml
-
   - name: "Security checks"
     task:
       secrets:
@@ -44,6 +25,25 @@ blocks:
         - name: Check code
           commands:
             - make check.static
+
+  - name: "Test"
+    task:
+      env_vars:
+        - name: GO111MODULE
+          value: "on"
+      jobs:
+        - name: Unit tests
+          commands:
+            - checkout
+            - sem-version go 1.16
+            - go install gotest.tools/gotestsum@latest
+            - make go.get
+            - make build
+            - make test
+      epilogue:
+        always:
+          commands:
+            - test-results publish junit-report.xml
 
 promotions:
   - name: "Release"

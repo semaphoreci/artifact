@@ -64,6 +64,7 @@ func (u *SignedURL) put(client *http.Client, artifact *Artifact) error {
 		return fmt.Errorf("failed to open '%s': %v", artifact.LocalPath, err)
 	}
 
+	// #nosec
 	defer f.Close()
 
 	fileInfo, err := f.Stat()
@@ -106,6 +107,8 @@ func (u *SignedURL) get(client *http.Client, artifact *Artifact) error {
 	log.Debugf("GET '%s'...\n", u.URL)
 
 	parentDir := filepath.Dir(artifact.LocalPath)
+
+	// #nosec
 	err := os.MkdirAll(parentDir, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create parent directory '%s': %v", parentDir, err)
@@ -116,6 +119,7 @@ func (u *SignedURL) get(client *http.Client, artifact *Artifact) error {
 		return fmt.Errorf("failed to create local file '%s': %v", artifact.LocalPath, err)
 	}
 
+	// #nosec
 	defer f.Close()
 
 	req, err := http.NewRequest("GET", u.URL, nil)
