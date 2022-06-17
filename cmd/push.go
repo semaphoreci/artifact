@@ -6,15 +6,26 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
-	"github.com/semaphoreci/artifact/pkg/gcs"
-	errutil "github.com/semaphoreci/artifact/pkg/util/err"
-	"github.com/semaphoreci/artifact/pkg/util/log"
-	pathutil "github.com/semaphoreci/artifact/pkg/util/path"
+	errutil "github.com/semaphoreci/artifact/pkg/errors"
+	"github.com/semaphoreci/artifact/pkg/files"
+	"github.com/semaphoreci/artifact/pkg/hub"
+	"github.com/semaphoreci/artifact/pkg/storage"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
+
+const ExpireInDescription = `removes the files after the given amount of time.
+
+- Nd for N days
+- Nw for N weeks
+- Nm for N months
+- Ny for N years
+
+WARNING: This is an obsolete flag and has no effect.
+Set up a retention policy in your project instead.
+Docs: https://docs.semaphoreci.com/essentials/artifacts/#artifact-retention-policies.
+`
 
 // pushCmd represents the push command
 var pushCmd = &cobra.Command{
@@ -24,14 +35,14 @@ var pushCmd = &cobra.Command{
 while the rest of the semaphore process, or after it.`,
 }
 
-func runPushForCategory(cmd *cobra.Command, args []string, category, catID string) (string, string) {
-	err := pathutil.InitPathID(category, catID)
+func runPushForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, error) {
+	hubClient, err := hub.NewClient()
 	errutil.Check(err)
 
-	src, err := getSrc(cmd, args)
+	localSource, err := getSrc(cmd, args)
 	errutil.Check(err)
 
-	dst, err := cmd.Flags().GetString("destination")
+	destinationOverride, err := cmd.Flags().GetString("destination")
 	errutil.Check(err)
 
 	force, err := cmd.Flags().GetBool("force")
@@ -43,11 +54,11 @@ func runPushForCategory(cmd *cobra.Command, args []string, category, catID strin
 		displayWarningThatExpireInIsNoLongerSupported()
 	}
 
-	dst, src = gcs.PushPaths(filepath.ToSlash(dst), filepath.ToSlash(src))
-	if ok := gcs.PushGCS(dst, src, force); !ok {
-		os.Exit(1) // error already logged
-	}
-	return dst, src
+	return storage.Push(hubClient, resolver, storage.PushOptions{
+		SourcePath:          localSource,
+		DestinationOverride: destinationOverride,
+		Force:               force,
+	})
 }
 
 func displayWarningThatExpireInIsNoLongerSupported() {
@@ -58,87 +69,116 @@ func displayWarningThatExpireInIsNoLongerSupported() {
 	fmt.Println("")
 }
 
-// PushJobCmd is the subcommand for "artifact push job ..."
-var PushJobCmd = &cobra.Command{
-	Use:   "job [SOURCE PATH]",
-	Short: "Uploads a job file or directory to the storage.",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+func NewPushJobCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "job [SOURCE PATH]",
+		Short: "Uploads a job file or directory to the storage.",
+		Long:  ``,
+		Args:  cobra.ExactArgs(1),
 
-	Run: func(cmd *cobra.Command, args []string) {
-		catID, err := cmd.Flags().GetString("job-id")
-		errutil.Check(err)
-		dst, src := runPushForCategory(cmd, args, pathutil.JOB, catID)
-		log.Info("successful push for current job", zap.String("source", src), zap.String("destination", dst))
-	},
+		Run: func(cmd *cobra.Command, args []string) {
+			jobId, err := cmd.Flags().GetString("job-id")
+			errutil.Check(err)
+
+			resolver, err := files.NewPathResolver(files.ResourceTypeJob, jobId)
+			errutil.Check(err)
+
+			paths, err := runPushForCategory(cmd, args, resolver)
+			if err != nil {
+				log.Errorf("Error pushing artifact: %v\n", err)
+				errutil.Exit(1)
+				return
+			}
+
+			log.Info("Successfully pushed artifact for current job.\n")
+			log.Infof("* Local source: %s.\n", paths.Source)
+			log.Infof("* Remote destination: %s.\n", paths.Destination)
+		},
+	}
+
+	cmd.Flags().StringP("destination", "d", "", "rename the file while uploading")
+	cmd.Flags().BoolP("force", "f", false, "force overwrite")
+	cmd.Flags().StringP("expire-in", "e", "", ExpireInDescription)
+	cmd.Flags().StringP("job-id", "j", "", "set explicit job id")
+
+	return cmd
 }
 
-// PushWorkflowCmd is the subcommand for "artifact push workflow ..."
-var PushWorkflowCmd = &cobra.Command{
-	Use:   "workflow [SOURCE PATH]",
-	Short: "Uploads a workflow or directory file to the storage.",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+func NewPushWorkflowCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "workflow [SOURCE PATH]",
+		Short: "Uploads a workflow or directory file to the storage.",
+		Long:  ``,
+		Args:  cobra.ExactArgs(1),
 
-	Run: func(cmd *cobra.Command, args []string) {
-		catID, err := cmd.Flags().GetString("workflow-id")
-		errutil.Check(err)
-		dst, src := runPushForCategory(cmd, args, pathutil.WORKFLOW, catID)
-		log.Info("successful push for current workflow", zap.String("source", src),
-			zap.String("destination", dst))
-	},
+		Run: func(cmd *cobra.Command, args []string) {
+			workflowId, err := cmd.Flags().GetString("workflow-id")
+			errutil.Check(err)
+
+			resolver, err := files.NewPathResolver(files.ResourceTypeWorkflow, workflowId)
+			errutil.Check(err)
+
+			paths, err := runPushForCategory(cmd, args, resolver)
+			if err != nil {
+				log.Errorf("Error pushing artifact: %v\n", err)
+				errutil.Exit(1)
+				return
+			}
+
+			log.Info("Successfully pushed artifact for current job.\n")
+			log.Infof("* Local source: %s.\n", paths.Source)
+			log.Infof("* Remote destination: %s.\n", paths.Destination)
+		},
+	}
+
+	cmd.Flags().StringP("destination", "d", "", "rename the file while uploading")
+	cmd.Flags().BoolP("force", "f", false, "force overwrite")
+	cmd.Flags().StringP("expire-in", "e", "", ExpireInDescription)
+	cmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
+
+	return cmd
 }
 
-// PushProjectCmd is the subcommand for "artifact push project ..."
-var PushProjectCmd = &cobra.Command{
-	Use:   "project [SOURCE PATH]",
-	Short: "Upload a project file or directory to the storage.",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+func NewPushProjectCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "project [SOURCE PATH]",
+		Short: "Upload a project file or directory to the storage.",
+		Long:  ``,
+		Args:  cobra.ExactArgs(1),
 
-	Run: func(cmd *cobra.Command, args []string) {
-		catID, err := cmd.Flags().GetString("project-id")
-		errutil.Check(err)
-		dst, src := runPushForCategory(cmd, args, pathutil.PROJECT, catID)
-		log.Info("successful push for current project", zap.String("source", src),
-			zap.String("destination", dst))
-	},
+		Run: func(cmd *cobra.Command, args []string) {
+			projectId, err := cmd.Flags().GetString("project-id")
+			errutil.Check(err)
+
+			resolver, err := files.NewPathResolver(files.ResourceTypeProject, projectId)
+			errutil.Check(err)
+
+			paths, err := runPushForCategory(cmd, args, resolver)
+			if err != nil {
+				log.Errorf("Error pushing artifact: %v\n", err)
+				errutil.Exit(1)
+				return
+			}
+
+			log.Info("Successfully pushed artifact for current job.\n")
+			log.Infof("* Local source: %s.\n", paths.Source)
+			log.Infof("* Remote destination: %s.\n", paths.Destination)
+		},
+	}
+
+	cmd.Flags().StringP("destination", "d", "", "rename the file while uploading")
+	cmd.Flags().BoolP("force", "f", false, "force overwrite")
+	cmd.Flags().StringP("expire-in", "e", "", ExpireInDescription)
+	cmd.Flags().StringP("project-id", "p", "", "set explicit project id")
+
+	return cmd
 }
 
 func init() {
 	rootCmd.AddCommand(pushCmd)
-	pushCmd.AddCommand(PushJobCmd)
-	pushCmd.AddCommand(PushWorkflowCmd)
-	pushCmd.AddCommand(PushProjectCmd)
-
-	desc := "rename the file while uploading"
-	PushJobCmd.Flags().StringP("destination", "d", "", desc)
-	PushWorkflowCmd.Flags().StringP("destination", "d", "", desc)
-	PushProjectCmd.Flags().StringP("destination", "d", "", desc)
-
-	desc = "force overwrite"
-	PushJobCmd.Flags().BoolP("force", "f", false, desc)
-	PushWorkflowCmd.Flags().BoolP("force", "f", false, desc)
-	PushProjectCmd.Flags().BoolP("force", "f", false, desc)
-
-	desc = `removes the files after the given amount of time.
-
-  - Nd for N days
-  - Nw for N weeks
-  - Nm for N months
-  - Ny for N years
-
-WARNING: This is an obsolete flag and has no effect.
-Set up a retention policy in your project instead.
-Docs: https://docs.semaphoreci.com/essentials/artifacts/#artifact-retention-policies.
-`
-	PushJobCmd.Flags().StringP("expire-in", "e", "", desc)
-	PushWorkflowCmd.Flags().StringP("expire-in", "e", "", desc)
-	PushProjectCmd.Flags().StringP("expire-in", "e", "", desc)
-
-	PushJobCmd.Flags().StringP("job-id", "j", "", "set explicit job id")
-	PushWorkflowCmd.Flags().StringP("workflow-id", "w", "", "set explicit workflow id")
-	PushProjectCmd.Flags().StringP("project-id", "p", "", "set explicit project id")
+	pushCmd.AddCommand(NewPushJobCmd())
+	pushCmd.AddCommand(NewPushWorkflowCmd())
+	pushCmd.AddCommand(NewPushProjectCmd())
 }
 
 func getSrc(cmd *cobra.Command, args []string) (string, error) {
@@ -162,7 +202,7 @@ func shouldUseStdin() bool {
 func saveStdinToTempFile() (string, error) {
 	tmpFile, err := ioutil.TempFile("", "*")
 	if err != nil {
-		log.Error("Error creating temporary file to read stdin", zap.Error(err))
+		log.Errorf("Error creating temporary file to read stdin: %v\n", err)
 		return "", err
 	}
 
@@ -185,20 +225,20 @@ func saveStdinToTempFile() (string, error) {
 			}
 
 			// nothing was read and we had an error
-			log.Error("Error reading stdin", zap.Error(err))
+			log.Errorf("Error reading stdin: %v\n", err)
 			return "", err
 		}
 
 		// something was read, but we still got an error
 		if err != nil && err != io.EOF {
-			log.Error("Error reading stdin", zap.Error(err))
+			log.Errorf("Error reading stdin: %v\n", err)
 			return "", err
 		}
 
 		// no errors when reading from stdin, just write it to the temporary file
 		_, err = tmpFile.Write(buf)
 		if err != nil {
-			log.Error("Error writing to temp file", zap.Error(err))
+			log.Errorf("Error writing to temp file: %v\n", err)
 			return "", err
 		}
 	}

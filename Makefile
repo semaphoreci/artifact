@@ -1,4 +1,4 @@
-.PHONY: build release
+.PHONY: build
 
 SECURITY_TOOLBOX_BRANCH ?= master
 SECURITY_TOOLBOX_TMP_DIR ?= /tmp/security-toolbox
@@ -26,8 +26,7 @@ go.fmt:
 	go fmt ./...
 
 test:
-	go test -v ./...
+	gotestsum --format short-verbose --junitfile junit-report.xml --packages="./..." -- -p 1
 
 build:
 	env GOOS=$(OS) GOARCH=$(ARCH) go build -o artifact
-	tar -czvf /tmp/artifact.tar.gz artifact
