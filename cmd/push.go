@@ -188,7 +188,7 @@ func getSrc(args []string) (string, error) {
 		return saveStdinToTempFile()
 	}
 
-	return args[0], nil
+	return input, nil
 }
 
 func shouldUseStdin(input string) bool {

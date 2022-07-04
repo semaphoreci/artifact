@@ -208,12 +208,12 @@ func Test__Push(t *testing.T) {
 		os.RemoveAll(tmpDir)
 	})
 
-	t.Run("push using input from a pipe", func(t *testing.T) {
+	t.Run("push using input from a pipe using -", func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip()
 		}
 
-		command := fmt.Sprintf("echo -n \"hello from pipe\" | %s push job - -d from-pipe.txt -v", getBinaryPath(rootFolder))
+		command := fmt.Sprintf("echo -n \"hello from dash\" | %s push job - -d from-dash.txt -v", getBinaryPath(rootFolder))
 		tmpScript, err := createTempScript(command)
 		if !assert.Nil(t, err) {
 			return
@@ -224,14 +224,71 @@ func Test__Push(t *testing.T) {
 		assert.Contains(t, output, "Detected stdin, saving it to a temporary file...")
 		assert.Contains(t, output, "Successfully pushed artifact for current job")
 
-		output, err = executeCommand("pull", rootFolder, []string{"from-pipe.txt"})
+		output, err = executeCommand("pull", rootFolder, []string{"from-dash.txt"})
 		assert.Nil(t, err)
 		assert.Contains(t, output, "Successfully pulled artifact for current job")
 
-		fileContents, _ := ioutil.ReadFile("from-pipe.txt")
-		assert.Equal(t, "hello from pipe", string(fileContents))
+		fileContents, _ := ioutil.ReadFile("from-dash.txt")
+		assert.Equal(t, "hello from dash", string(fileContents))
 
-		os.Remove("from-pipe.txt")
+		os.Remove("from-dash.txt")
+		os.Remove(tmpScript)
+	})
+
+	t.Run("push using input from a pipe using /dev/stdin", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip()
+		}
+
+		command := fmt.Sprintf("echo -n \"hello from /dev/stdin\" | %s push job /dev/stdin -d from-dev-stdin.txt -v", getBinaryPath(rootFolder))
+		tmpScript, err := createTempScript(command)
+		if !assert.Nil(t, err) {
+			return
+		}
+
+		output, err := executeTempScript(tmpScript)
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Detected stdin, saving it to a temporary file...")
+		assert.Contains(t, output, "Successfully pushed artifact for current job")
+
+		output, err = executeCommand("pull", rootFolder, []string{"from-dev-stdin.txt"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+
+		fileContents, _ := ioutil.ReadFile("from-dev-stdin.txt")
+		assert.Equal(t, "hello from /dev/stdin", string(fileContents))
+
+		os.Remove("from-dev-stdin.txt")
+		os.Remove(tmpScript)
+	})
+
+	t.Run("input coming from pipe but file is used", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip()
+		}
+
+		tmpFile, _ := ioutil.TempFile("", "*")
+		tmpFile.Write([]byte("hello from file"))
+
+		command := fmt.Sprintf("echo -n \"hello from pipe\" | %s push job %s -d not-from-pipe.txt -v", getBinaryPath(rootFolder), tmpFile.Name())
+		tmpScript, err := createTempScript(command)
+		if !assert.Nil(t, err) {
+			return
+		}
+
+		output, err := executeTempScript(tmpScript)
+		assert.Nil(t, err)
+		assert.NotContains(t, output, "Detected stdin, saving it to a temporary file...")
+		assert.Contains(t, output, "Successfully pushed artifact for current job")
+
+		output, err = executeCommand("pull", rootFolder, []string{"not-from-pipe.txt"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+
+		fileContents, _ := ioutil.ReadFile("not-from-pipe.txt")
+		assert.Equal(t, "hello from file", string(fileContents))
+
+		os.Remove("not-from-pipe.txt")
 		os.Remove(tmpScript)
 	})
 
