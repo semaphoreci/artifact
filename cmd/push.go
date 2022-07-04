@@ -184,7 +184,7 @@ func init() {
 func getSrc(args []string) (string, error) {
 	input := args[0]
 	if shouldUseStdin(input) {
-		log.Debug("Detected stdin, saving it to a temporary file...")
+		log.Debug("Detected stdin, saving it to a temporary file...\n")
 		return saveStdinToTempFile()
 	}
 

@@ -76,7 +76,7 @@ func (u *SignedURL) put(client *http.Client, artifact *Artifact) error {
 	// If the file has no bytes, we need to use http.NoBody
 	// See https://cs.opensource.google/go/go/+/refs/tags/go1.18.2:src/net/http/request.go;l=920
 	if fileInfo.Size() == 0 {
-		log.Debugf("'%s' is empty.", artifact.LocalPath)
+		log.Debugf("'%s' is empty.\n", artifact.LocalPath)
 		contentBody = http.NoBody
 	}
 
