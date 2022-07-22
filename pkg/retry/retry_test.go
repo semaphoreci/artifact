@@ -22,7 +22,7 @@ func Test__GivesUpAfterMaxRetries(t *testing.T) {
 	attempts := 0
 	err := RetryWithConstantWait("test", 5, 100*time.Millisecond, func() error {
 		attempts++
-		return errors.New("bad error")
+		return errors.New("bad error 500")
 	})
 	assert.Equal(t, attempts, 5)
 	assert.NotNil(t, err)

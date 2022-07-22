@@ -2,6 +2,7 @@ package retry
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -14,6 +15,9 @@ func RetryWithConstantWait(task string, maxAttempts int, wait time.Duration, f f
 			return nil
 		}
 
+		if !strings.Contains(err.Error(), "500") {
+			return err
+		}
 		if attempt >= maxAttempts {
 			return fmt.Errorf("[%s] failed after [%d] attempts - giving up: %v", task, attempt, err)
 		}
