@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	api "github.com/semaphoreci/artifact/pkg/api"
@@ -67,7 +68,7 @@ func NewClient() (*Client, error) {
 }
 
 func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSignedURLsRequestType) (*GenerateSignedURLsResponse, error) {
-	req_body := GenerateSignedURLsRequest{
+	reqBody := GenerateSignedURLsRequest{
 		Paths: remotePaths,
 		Type:  requestType,
 	}
@@ -78,18 +79,18 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSi
 
 	var response GenerateSignedURLsResponse
 
-	req, err := createRequest("POST", c.URL, c.Token, req_body)
+	req, err := createRequest("POST", c.URL, c.Token, reqBody)
 	if err != nil {
 		return nil, err
 	}
-	retry_client := retryablehttp.NewClient()
-	retry_client.RetryMax = 5
-	retry_client.RetryWaitMax = 5
-	http_resp, err := retry_client.Do(req)
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 5
+	retryClient.RetryWaitMax = 1 * time.Second
+	httpResp, err := retryClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	err = decodeResponse(http_resp, &response)
+	err = decodeResponse(httpResp, &response)
 	if err != nil {
 		return nil, err
 	}
@@ -98,12 +99,12 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSi
 	return &response, nil
 }
 
-func createRequest(method, url, token string, req_body interface{}) (*retryablehttp.Request, error) {
-	var serialized_request_data bytes.Buffer
-	if err := json.NewEncoder(&serialized_request_data).Encode(req_body); err != nil {
+func createRequest(method, url, token string, reqBody interface{}) (*retryablehttp.Request, error) {
+	var serializedRequestRata bytes.Buffer
+	if err := json.NewEncoder(&serializedRequestRata).Encode(reqBody); err != nil {
 		return nil, fmt.Errorf("Failed to encode http data: %v", err)
 	}
-	req, err := retryablehttp.NewRequest(method, url, serialized_request_data.Bytes())
+	req, err := retryablehttp.NewRequest(method, url, serializedRequestRata.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create new Request: %v", err)
 	}
@@ -111,9 +112,9 @@ func createRequest(method, url, token string, req_body interface{}) (*retryableh
 	return req, nil
 }
 
-func decodeResponse(http_resp *http.Response, response *GenerateSignedURLsResponse) error {
-	defer http_resp.Body.Close()
-	if err := json.NewDecoder(http_resp.Body).Decode(&response); err != nil {
+func decodeResponse(httpResp *http.Response, response *GenerateSignedURLsResponse) error {
+	defer httpResp.Body.Close()
+	if err := json.NewDecoder(httpResp.Body).Decode(&response); err != nil {
 		return fmt.Errorf("failed to decode signed URL http response: %v", err)
 	}
 
