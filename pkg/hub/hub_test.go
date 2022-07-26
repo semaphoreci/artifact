@@ -1,6 +1,8 @@
 package hub
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -42,4 +44,56 @@ func Test__HubClientCreation(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, client)
 	})
+}
+
+func Test__GenerateSignedURL(t *testing.T) {
+
+	t.Run("Retry only once when artifact hub returns 404", func(t *testing.T) {
+		noOfCalls := 0
+		mockArtifactHubServer := generateMockServer(&noOfCalls, 404)
+		defer mockArtifactHubServer.Close()
+
+		response, err := generateSignedURLsHelper(mockArtifactHubServer.URL)
+		assert.Nil(t, response)
+		assert.NotNil(t, err)
+		assert.Equal(t, 1, noOfCalls)
+	})
+
+	t.Run("Retry only once when artifact hub returns 401", func(t *testing.T) {
+		noOfCalls := 0
+		mockArtifactHubServer := generateMockServer(&noOfCalls, 401)
+		defer mockArtifactHubServer.Close()
+
+		response, err := generateSignedURLsHelper(mockArtifactHubServer.URL)
+		assert.Nil(t, response)
+		assert.NotNil(t, err)
+		assert.Equal(t, 1, noOfCalls)
+	})
+
+	t.Run("Retry 5 times when artifact hub returns 500", func(t *testing.T) {
+		noOfCalls := 0
+		mockArtifactHubServer := generateMockServer(&noOfCalls, 500)
+		defer mockArtifactHubServer.Close()
+
+		response, err := generateSignedURLsHelper(mockArtifactHubServer.URL)
+		assert.Nil(t, response)
+		assert.NotNil(t, err)
+		assert.Equal(t, 5, noOfCalls)
+	})
+}
+
+func generateSignedURLsHelper(url string) (*GenerateSignedURLsResponse, error) {
+	client := Client{
+		URL:        url,
+		Token:      "",
+		HttpClient: &http.Client{},
+	}
+	return client.GenerateSignedURLs([]string{}, GenerateSignedURLsRequestPULL)
+}
+
+func generateMockServer(counter *int, codeToReturn int) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*counter++
+		w.WriteHeader(codeToReturn)
+	}))
 }
