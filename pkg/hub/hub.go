@@ -84,7 +84,8 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSi
 		return nil, err
 	}
 	retryClient := retryablehttp.NewClient()
-	retryClient.RetryMax = 5
+	// 4 retries means 5 requests in total
+	retryClient.RetryMax = 4
 	retryClient.RetryWaitMax = 1 * time.Second
 	httpResp, err := retryClient.Do(req)
 	if err != nil {
