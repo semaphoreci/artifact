@@ -11,6 +11,7 @@ import (
 
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	api "github.com/semaphoreci/artifact/pkg/api"
+	"github.com/semaphoreci/artifact/pkg/common"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -89,8 +90,9 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSi
 	retryClient.RetryWaitMax = 1 * time.Second
 	httpResp, err := retryClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("request did not return a non-5xx response: %v", err)
 	}
+
 	err = decodeResponse(httpResp, &response)
 	if err != nil {
 		return nil, err
@@ -115,6 +117,11 @@ func createRequest(method, url, token string, reqBody interface{}) (*retryableht
 
 func decodeResponse(httpResp *http.Response, response *GenerateSignedURLsResponse) error {
 	defer httpResp.Body.Close()
+
+	if !common.IsStatusOK(httpResp.StatusCode) {
+		return fmt.Errorf("failed to generate signed URLs - hub returned %d status code", httpResp.StatusCode)
+	}
+
 	if err := json.NewDecoder(httpResp.Body).Decode(&response); err != nil {
 		return fmt.Errorf("failed to decode signed URL http response: %v", err)
 	}
