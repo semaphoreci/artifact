@@ -1,8 +1,9 @@
 package storage
 
 import (
-	"net/http"
+	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	api "github.com/semaphoreci/artifact/pkg/api"
 	hub "github.com/semaphoreci/artifact/pkg/hub"
 	log "github.com/sirupsen/logrus"
@@ -25,7 +26,9 @@ func Yank(hubClient *hub.Client, name string) error {
 }
 
 func doYank(URLs []*api.SignedURL) error {
-	client := &http.Client{}
+	client := retryablehttp.NewClient()
+	client.RetryMax = 4
+	client.RetryWaitMax = 1 * time.Second
 
 	for _, u := range URLs {
 		// The hub is not returning the method for yank operations, so we fill it here
