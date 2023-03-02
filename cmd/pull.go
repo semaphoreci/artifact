@@ -32,6 +32,7 @@ func runPullForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 		SourcePath:          args[0],
 		DestinationOverride: destinationOverride,
 		Force:               force,
+		Verbose:             verbose,
 	})
 }
 
