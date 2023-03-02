@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -98,7 +97,12 @@ func (u *SignedURL) put(client *retryablehttp.Client, artifact *Artifact) error 
 
 	log.Debugf("PUT request got %d response.\n", response.StatusCode)
 	if !common.IsStatusOK(response.StatusCode) {
-		return u.fail(response)
+		return fmt.Errorf(
+			"%s request to %s failed with %d status code",
+			u.Method,
+			u.URL,
+			response.StatusCode,
+		)
 	}
 
 	return nil
@@ -122,17 +126,25 @@ func (u *SignedURL) get(client *retryablehttp.Client, artifact *Artifact) error 
 
 	req, err := retryablehttp.NewRequest("GET", u.URL, nil)
 	if err != nil {
+		u.closeFile(f, true)
 		return fmt.Errorf("failed to create GET request: %v", err)
 	}
 
 	response, err := client.Do(req)
 	if err != nil {
+		u.closeFile(f, true)
 		return fmt.Errorf("failed to execute GET request: %v", err)
 	}
 
 	log.Debugf("GET request got %d response.\n", response.StatusCode)
 	if !common.IsStatusOK(response.StatusCode) {
-		return u.fail(response)
+		u.closeFile(f, true)
+		return fmt.Errorf(
+			"%s request to %s failed with %d status code",
+			u.Method,
+			u.URL,
+			response.StatusCode,
+		)
 	}
 
 	defer response.Body.Close()
@@ -142,7 +154,20 @@ func (u *SignedURL) get(client *retryablehttp.Client, artifact *Artifact) error 
 		return fmt.Errorf("failed to read HTTP response: %v", err)
 	}
 
+	u.closeFile(f, false)
 	return nil
+}
+
+func (u *SignedURL) closeFile(f *os.File, remove bool) {
+	if err := f.Close(); err != nil {
+		log.Errorf("Error closing file '%s': %v", f.Name, err)
+	}
+
+	if remove {
+		if err := os.Remove(f.Name()); err != nil {
+			log.Errorf("Error removing file '%s': %v", f.Name, err)
+		}
+	}
 }
 
 func (u *SignedURL) delete(client *retryablehttp.Client, artifact *Artifact) error {
@@ -162,15 +187,6 @@ func (u *SignedURL) delete(client *retryablehttp.Client, artifact *Artifact) err
 
 	log.Debugf("DELETE request got %d response.\n", response.StatusCode)
 	if !common.IsStatusOK(response.StatusCode) {
-		return u.fail(response)
-	}
-
-	return nil
-}
-
-func (u *SignedURL) fail(response *http.Response) error {
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
 		return fmt.Errorf(
 			"%s request to %s failed with %d status code",
 			u.Method,
@@ -179,13 +195,7 @@ func (u *SignedURL) fail(response *http.Response) error {
 		)
 	}
 
-	return fmt.Errorf(
-		"%s request to %s failed with %d status code: %s",
-		u.Method,
-		u.URL,
-		response.StatusCode,
-		string(body),
-	)
+	return nil
 }
 
 func (u *SignedURL) GetObject() (string, error) {

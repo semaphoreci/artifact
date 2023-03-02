@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
 	api "github.com/semaphoreci/artifact/pkg/api"
 	"github.com/semaphoreci/artifact/pkg/files"
 	hub "github.com/semaphoreci/artifact/pkg/hub"
@@ -71,9 +69,7 @@ func buildArtifacts(signedURLs []*api.SignedURL, paths *files.ResolvedPath, forc
 }
 
 func doPull(force bool, artifacts []*api.Artifact, signedURLs []*api.SignedURL) error {
-	client := retryablehttp.NewClient()
-	client.RetryMax = 4
-	client.RetryWaitMax = 1 * time.Second
+	client := newHTTPClient()
 
 	for _, artifact := range artifacts {
 		for _, signedURL := range artifact.URLs {

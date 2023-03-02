@@ -5,9 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
 	api "github.com/semaphoreci/artifact/pkg/api"
 	files "github.com/semaphoreci/artifact/pkg/files"
 	hub "github.com/semaphoreci/artifact/pkg/hub"
@@ -134,9 +132,7 @@ func attachURLs(items []*api.Artifact, signedURLs []*api.SignedURL, force bool) 
 }
 
 func doPush(force bool, artifacts []*api.Artifact, signedURLs []*api.SignedURL) error {
-	client := retryablehttp.NewClient()
-	client.RetryMax = 4
-	client.RetryWaitMax = 1 * time.Second
+	client := newHTTPClient()
 
 	for _, artifact := range artifacts {
 		for _, signedURL := range artifact.URLs {
