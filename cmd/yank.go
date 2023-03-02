@@ -26,7 +26,7 @@ func runYankForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 	paths, err := resolver.Resolve(files.OperationYank, args[0], "")
 	errutil.Check(err)
 
-	return paths, storage.Yank(hubClient, paths.Source)
+	return paths, storage.Yank(hubClient, paths.Source, verbose)
 }
 
 func NewYankJobCmd() *cobra.Command {

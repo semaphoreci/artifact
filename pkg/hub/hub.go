@@ -12,6 +12,7 @@ import (
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	api "github.com/semaphoreci/artifact/pkg/api"
 	"github.com/semaphoreci/artifact/pkg/common"
+	"github.com/semaphoreci/artifact/pkg/logger"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -68,7 +69,7 @@ func NewClient() (*Client, error) {
 	}, nil
 }
 
-func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSignedURLsRequestType) (*GenerateSignedURLsResponse, error) {
+func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSignedURLsRequestType, verbose bool) (*GenerateSignedURLsResponse, error) {
 	reqBody := GenerateSignedURLsRequest{
 		Paths: remotePaths,
 		Type:  requestType,
@@ -84,10 +85,14 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSi
 	if err != nil {
 		return nil, err
 	}
+
 	retryClient := retryablehttp.NewClient()
+
 	// 4 retries means 5 requests in total
 	retryClient.RetryMax = 4
 	retryClient.RetryWaitMax = 1 * time.Second
+	retryClient.Logger = newLogger(verbose)
+
 	httpResp, err := retryClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request did not return a non-5xx response: %v", err)
@@ -131,4 +136,14 @@ func decodeResponse(httpResp *http.Response, response *GenerateSignedURLsRespons
 	}
 
 	return nil
+}
+
+func newLogger(verbose bool) *log.Logger {
+	l := log.New()
+	l.SetFormatter(new(logger.CustomFormatter))
+	if verbose {
+		l.SetLevel(log.DebugLevel)
+	}
+
+	return l
 }

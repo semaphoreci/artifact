@@ -15,6 +15,7 @@ type PullOptions struct {
 	SourcePath          string
 	DestinationOverride string
 	Force               bool
+	Verbose             bool
 }
 
 func Pull(hubClient *hub.Client, resolver *files.PathResolver, options PullOptions) (*files.ResolvedPath, error) {
@@ -28,7 +29,7 @@ func Pull(hubClient *hub.Client, resolver *files.PathResolver, options PullOptio
 	log.Debugf("* Destination: %s\n", paths.Destination)
 	log.Debugf("* Force: %v\n", options.Force)
 
-	response, err := hubClient.GenerateSignedURLs([]string{paths.Source}, hub.GenerateSignedURLsRequestPULL)
+	response, err := hubClient.GenerateSignedURLs([]string{paths.Source}, hub.GenerateSignedURLsRequestPULL, options.Verbose)
 	if err != nil {
 		return nil, err
 	}

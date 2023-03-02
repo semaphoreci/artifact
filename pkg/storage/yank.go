@@ -7,8 +7,8 @@ import (
 )
 
 // Deletes a file or directory from the remote storage
-func Yank(hubClient *hub.Client, name string) error {
-	response, err := hubClient.GenerateSignedURLs([]string{name}, hub.GenerateSignedURLsRequestYANK)
+func Yank(hubClient *hub.Client, name string, verbose bool) error {
+	response, err := hubClient.GenerateSignedURLs([]string{name}, hub.GenerateSignedURLsRequestYANK, verbose)
 	if err != nil {
 		return err
 	}

@@ -107,7 +107,7 @@ func generateSignedURLsHelper(url string) (*GenerateSignedURLsResponse, error) {
 		Token:      "",
 		HttpClient: &http.Client{},
 	}
-	return client.GenerateSignedURLs([]string{}, GenerateSignedURLsRequestPULL)
+	return client.GenerateSignedURLs([]string{}, GenerateSignedURLsRequestPULL, true)
 }
 
 func generateMockServer(counter *int, codeToReturn int, responseBody []byte) *httptest.Server {

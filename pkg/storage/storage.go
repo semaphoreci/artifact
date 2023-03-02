@@ -23,6 +23,11 @@ func newHTTPClient() *retryablehttp.Client {
 				return
 			}
 
+			// 404 on a HEAD request is not an error for us.
+			if r.StatusCode == http.StatusNotFound && r.Request.Method == http.MethodHead {
+				return
+			}
+
 			body, err := ioutil.ReadAll(r.Body)
 			if err != nil {
 				log.Errorf(
