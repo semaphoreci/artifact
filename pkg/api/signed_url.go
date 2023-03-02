@@ -160,12 +160,12 @@ func (u *SignedURL) get(client *retryablehttp.Client, artifact *Artifact) error 
 
 func (u *SignedURL) closeFile(f *os.File, remove bool) {
 	if err := f.Close(); err != nil {
-		log.Errorf("Error closing file '%s': %v", f.Name, err)
+		log.Errorf("Error closing file '%s': %v", f.Name(), err)
 	}
 
 	if remove {
 		if err := os.Remove(f.Name()); err != nil {
-			log.Errorf("Error removing file '%s': %v", f.Name, err)
+			log.Errorf("Error removing file '%s': %v", f.Name(), err)
 		}
 	}
 }
