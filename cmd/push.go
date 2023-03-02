@@ -58,7 +58,6 @@ func runPushForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 		SourcePath:          localSource,
 		DestinationOverride: destinationOverride,
 		Force:               force,
-		Verbose:             verbose,
 	})
 }
 

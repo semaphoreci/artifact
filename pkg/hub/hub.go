@@ -12,7 +12,6 @@ import (
 	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	api "github.com/semaphoreci/artifact/pkg/api"
 	"github.com/semaphoreci/artifact/pkg/common"
-	"github.com/semaphoreci/artifact/pkg/logger"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -69,7 +68,7 @@ func NewClient() (*Client, error) {
 	}, nil
 }
 
-func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSignedURLsRequestType, verbose bool) (*GenerateSignedURLsResponse, error) {
+func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSignedURLsRequestType) (*GenerateSignedURLsResponse, error) {
 	reqBody := GenerateSignedURLsRequest{
 		Paths: remotePaths,
 		Type:  requestType,
@@ -91,7 +90,7 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSi
 	// 4 retries means 5 requests in total
 	retryClient.RetryMax = 4
 	retryClient.RetryWaitMax = 1 * time.Second
-	retryClient.Logger = newLogger(verbose)
+	retryClient.Logger = &leveledLogger{}
 
 	httpResp, err := retryClient.Do(req)
 	if err != nil {
@@ -138,12 +137,22 @@ func decodeResponse(httpResp *http.Response, response *GenerateSignedURLsRespons
 	return nil
 }
 
-func newLogger(verbose bool) *log.Logger {
-	l := log.New()
-	l.SetFormatter(new(logger.CustomFormatter))
-	if verbose {
-		l.SetLevel(log.DebugLevel)
-	}
+// the logrus logger does not match the retryablehttp.LeveledLogger interface,
+// so we need to use a thin wrapper on top of the logrus one.
+type leveledLogger struct{}
 
-	return l
+func (l *leveledLogger) Error(msg string, keysAndValues ...interface{}) {
+	log.Error(msg, keysAndValues, "\n")
+}
+
+func (l *leveledLogger) Info(msg string, keysAndValues ...interface{}) {
+	log.Info(msg, keysAndValues, "\n")
+}
+
+func (l *leveledLogger) Debug(msg string, keysAndValues ...interface{}) {
+	log.Debug(msg, keysAndValues, "\n")
+}
+
+func (l *leveledLogger) Warn(msg string, keysAndValues ...interface{}) {
+	log.Warn(msg, keysAndValues, "\n")
 }

@@ -16,7 +16,6 @@ type PushOptions struct {
 	SourcePath          string
 	DestinationOverride string
 	Force               bool
-	Verbose             bool
 }
 
 func (o *PushOptions) RequestType() hub.GenerateSignedURLsRequestType {
@@ -43,7 +42,7 @@ func Push(hubClient *hub.Client, resolver *files.PathResolver, options PushOptio
 		return nil, err
 	}
 
-	response, err := hubClient.GenerateSignedURLs(api.RemotePaths(artifacts), options.RequestType(), options.Verbose)
+	response, err := hubClient.GenerateSignedURLs(api.RemotePaths(artifacts), options.RequestType())
 	if err != nil {
 		return nil, err
 	}
