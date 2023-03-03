@@ -35,7 +35,7 @@ blocks:
         - name: Unit tests
           commands:
             - checkout
-            - sem-version go 1.16
+            - sem-version go 1.18
             - go install gotest.tools/gotestsum@latest
             - make go.get
             - make build
