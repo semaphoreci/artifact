@@ -4,15 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"time"
 
+	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	api "github.com/semaphoreci/artifact/pkg/api"
-	common "github.com/semaphoreci/artifact/pkg/common"
-	retry "github.com/semaphoreci/artifact/pkg/retry"
+	"github.com/semaphoreci/artifact/pkg/common"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -70,7 +69,7 @@ func NewClient() (*Client, error) {
 }
 
 func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSignedURLsRequestType) (*GenerateSignedURLsResponse, error) {
-	request := &GenerateSignedURLsRequest{
+	reqBody := GenerateSignedURLsRequest{
 		Paths: remotePaths,
 		Type:  requestType,
 	}
@@ -79,61 +78,81 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSi
 	log.Debugf("* Request type: %v\n", requestType)
 	log.Debugf("* Paths: %v\n", remotePaths)
 
-	var response *GenerateSignedURLsResponse
-	err := retry.RetryWithConstantWait("generate signed URLs", 5, time.Second, func() error {
-		r, err := c.executeRequest(request)
-		if err != nil {
-			return err
-		}
+	var response GenerateSignedURLsResponse
 
-		response = r
-		return nil
-	})
+	req, err := createRequest("POST", c.URL, c.Token, reqBody)
+	if err != nil {
+		return nil, err
+	}
 
+	retryClient := retryablehttp.NewClient()
+
+	// 4 retries means 5 requests in total
+	retryClient.RetryMax = 4
+	retryClient.RetryWaitMax = 1 * time.Second
+	retryClient.Logger = &leveledLogger{}
+
+	httpResp, err := retryClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request did not return a non-5xx response: %v", err)
+	}
+
+	err = decodeResponse(httpResp, &response)
 	if err != nil {
 		return nil, err
 	}
 
 	log.Debug("Successfully generated signed URLs.\n")
-	return response, nil
+	return &response, nil
 }
 
-func (c *Client) executeRequest(data interface{}) (*GenerateSignedURLsResponse, error) {
-	var b bytes.Buffer
-	if data != nil {
-		if err := json.NewEncoder(&b).Encode(data); err != nil {
-			return nil, fmt.Errorf("failed to encode http data: %v", err)
-		}
+func createRequest(method, url, token string, reqBody interface{}) (*retryablehttp.Request, error) {
+	var serializedRequestRata bytes.Buffer
+	if err := json.NewEncoder(&serializedRequestRata).Encode(reqBody); err != nil {
+		return nil, fmt.Errorf("Failed to encode http data: %v", err)
 	}
-
-	q, err := http.NewRequest(http.MethodPost, c.URL, &b)
+	req, err := retryablehttp.NewRequest(method, url, serializedRequestRata.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create signed URL http request: %v", err)
+		return nil, fmt.Errorf("Failed to create new Request: %v", err)
+	}
+	req.Header.Set("authorization", token)
+	return req, nil
+}
+
+func decodeResponse(httpResp *http.Response, response *GenerateSignedURLsResponse) error {
+	defer httpResp.Body.Close()
+
+	if !common.IsStatusOK(httpResp.StatusCode) {
+		return fmt.Errorf("failed to generate signed URLs - hub returned %d status code", httpResp.StatusCode)
 	}
 
-	q.Header.Set("authorization", c.Token)
-	r, err := c.HttpClient.Do(q)
-	if err != nil {
-		return nil, fmt.Errorf("signed URL request failed: %v", err)
-	}
-
-	defer r.Body.Close()
-
-	if !common.IsStatusOK(r.StatusCode) {
-		return nil, fmt.Errorf("signed URL request returned %d", r.StatusCode)
-	}
-
-	b.Reset()
-	tee := io.TeeReader(r.Body, &b)
-
-	var response GenerateSignedURLsResponse
-	if err = json.NewDecoder(tee).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode signed URL http response: %v", err)
+	if err := json.NewDecoder(httpResp.Body).Decode(&response); err != nil {
+		return fmt.Errorf("failed to decode signed URL http response: %v", err)
 	}
 
 	if len(response.Error) > 0 {
-		return nil, fmt.Errorf("signed URL response returned errors: %s", response.Error)
+		return fmt.Errorf("signed URL response returned errors: %s", response.Error)
 	}
 
-	return &response, nil
+	return nil
+}
+
+// the logrus logger does not match the retryablehttp.LeveledLogger interface,
+// so we need to use a thin wrapper on top of the logrus one.
+type leveledLogger struct{}
+
+func (l *leveledLogger) Error(msg string, keysAndValues ...interface{}) {
+	log.Error(msg, keysAndValues, "\n")
+}
+
+func (l *leveledLogger) Info(msg string, keysAndValues ...interface{}) {
+	log.Info(msg, keysAndValues, "\n")
+}
+
+func (l *leveledLogger) Debug(msg string, keysAndValues ...interface{}) {
+	log.Debug(msg, keysAndValues, "\n")
+}
+
+func (l *leveledLogger) Warn(msg string, keysAndValues ...interface{}) {
+	log.Warn(msg, keysAndValues, "\n")
 }

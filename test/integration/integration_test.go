@@ -107,6 +107,64 @@ func Test__Pull(t *testing.T) {
 	storage.Close()
 }
 
+func Test__PullOn5xxFails(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	integrationFolder := filepath.Dir(file)
+	testFolder := filepath.Dir(integrationFolder)
+	rootFolder := filepath.Dir(testFolder)
+
+	storage, hub, err := prepare()
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	// We retry the request 5 times, so this should fail.
+	storage.SetMaxFailures(10)
+
+	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
+	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
+	os.Setenv("SEMAPHORE_JOB_ID", "1")
+
+	output, err := executeCommand("pull", rootFolder, []string{"file1.txt"})
+	if assert.NotNil(t, err) {
+		assert.Contains(t, output, "Error pulling artifact")
+		assert.NotContains(t, output, "Successfully pulled artifact for current job")
+		assert.Equal(t, 5, storage.RequestCount)
+	}
+
+	hub.Close()
+	storage.Close()
+}
+
+func Test__PullOn5xxEventuallySucceeds(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	integrationFolder := filepath.Dir(file)
+	testFolder := filepath.Dir(integrationFolder)
+	rootFolder := filepath.Dir(testFolder)
+
+	storage, hub, err := prepare()
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	// We retry the request 5 times, so this should eventually work.
+	storage.SetMaxFailures(2)
+
+	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
+	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
+	os.Setenv("SEMAPHORE_JOB_ID", "1")
+
+	output, err := executeCommand("pull", rootFolder, []string{"file1.txt"})
+	assert.Nil(t, err)
+	assert.Contains(t, output, "temporarily unavailable")
+	assert.Contains(t, output, "Successfully pulled artifact for current job")
+	assert.Equal(t, 3, storage.RequestCount)
+
+	hub.Close()
+	storage.Close()
+	os.Remove("file1.txt")
+}
+
 func Test__Push(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	integrationFolder := filepath.Dir(file)
@@ -208,12 +266,12 @@ func Test__Push(t *testing.T) {
 		os.RemoveAll(tmpDir)
 	})
 
-	t.Run("push using input from a pipe", func(t *testing.T) {
+	t.Run("push using input from a pipe using -", func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip()
 		}
 
-		command := fmt.Sprintf("echo -n \"hello from pipe\" | %s push job - -d from-pipe.txt -v", getBinaryPath(rootFolder))
+		command := fmt.Sprintf("echo -n \"hello from dash\" | %s push job - -d from-dash.txt -v", getBinaryPath(rootFolder))
 		tmpScript, err := createTempScript(command)
 		if !assert.Nil(t, err) {
 			return
@@ -224,14 +282,71 @@ func Test__Push(t *testing.T) {
 		assert.Contains(t, output, "Detected stdin, saving it to a temporary file...")
 		assert.Contains(t, output, "Successfully pushed artifact for current job")
 
-		output, err = executeCommand("pull", rootFolder, []string{"from-pipe.txt"})
+		output, err = executeCommand("pull", rootFolder, []string{"from-dash.txt"})
 		assert.Nil(t, err)
 		assert.Contains(t, output, "Successfully pulled artifact for current job")
 
-		fileContents, _ := ioutil.ReadFile("from-pipe.txt")
-		assert.Equal(t, "hello from pipe", string(fileContents))
+		fileContents, _ := ioutil.ReadFile("from-dash.txt")
+		assert.Equal(t, "hello from dash", string(fileContents))
 
-		os.Remove("from-pipe.txt")
+		os.Remove("from-dash.txt")
+		os.Remove(tmpScript)
+	})
+
+	t.Run("push using input from a pipe using /dev/stdin", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip()
+		}
+
+		command := fmt.Sprintf("echo -n \"hello from /dev/stdin\" | %s push job /dev/stdin -d from-dev-stdin.txt -v", getBinaryPath(rootFolder))
+		tmpScript, err := createTempScript(command)
+		if !assert.Nil(t, err) {
+			return
+		}
+
+		output, err := executeTempScript(tmpScript)
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Detected stdin, saving it to a temporary file...")
+		assert.Contains(t, output, "Successfully pushed artifact for current job")
+
+		output, err = executeCommand("pull", rootFolder, []string{"from-dev-stdin.txt"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+
+		fileContents, _ := ioutil.ReadFile("from-dev-stdin.txt")
+		assert.Equal(t, "hello from /dev/stdin", string(fileContents))
+
+		os.Remove("from-dev-stdin.txt")
+		os.Remove(tmpScript)
+	})
+
+	t.Run("input coming from pipe but file is used", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip()
+		}
+
+		tmpFile, _ := ioutil.TempFile("", "*")
+		tmpFile.Write([]byte("hello from file"))
+
+		command := fmt.Sprintf("echo -n \"hello from pipe\" | %s push job %s -d not-from-pipe.txt -v", getBinaryPath(rootFolder), tmpFile.Name())
+		tmpScript, err := createTempScript(command)
+		if !assert.Nil(t, err) {
+			return
+		}
+
+		output, err := executeTempScript(tmpScript)
+		assert.Nil(t, err)
+		assert.NotContains(t, output, "Detected stdin, saving it to a temporary file...")
+		assert.Contains(t, output, "Successfully pushed artifact for current job")
+
+		output, err = executeCommand("pull", rootFolder, []string{"not-from-pipe.txt"})
+		assert.Nil(t, err)
+		assert.Contains(t, output, "Successfully pulled artifact for current job")
+
+		fileContents, _ := ioutil.ReadFile("not-from-pipe.txt")
+		assert.Equal(t, "hello from file", string(fileContents))
+
+		os.Remove("not-from-pipe.txt")
 		os.Remove(tmpScript)
 	})
 
@@ -272,6 +387,67 @@ func Test__Push(t *testing.T) {
 	storage.Close()
 }
 
+func Test__PushOn5xxFails(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	integrationFolder := filepath.Dir(file)
+	testFolder := filepath.Dir(integrationFolder)
+	rootFolder := filepath.Dir(testFolder)
+
+	storage, hub, err := prepare()
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	// We retry the request 5 times, so this should fail altogether.
+	storage.SetMaxFailures(10)
+
+	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
+	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
+	os.Setenv("SEMAPHORE_JOB_ID", "1")
+
+	tmpFile, _ := ioutil.TempFile("", "")
+	tmpFile.Write([]byte("file1"))
+
+	output, err := executeCommand("push", rootFolder, []string{tmpFile.Name(), "-d", "file1.txt", "-f"})
+	assert.NotNil(t, err)
+	assert.Contains(t, output, "Error pushing artifact")
+	os.Remove(tmpFile.Name())
+	hub.Close()
+	storage.Close()
+}
+
+func Test__PushOn5xxEventuallySucceeds(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	integrationFolder := filepath.Dir(file)
+	testFolder := filepath.Dir(integrationFolder)
+	rootFolder := filepath.Dir(testFolder)
+
+	storage, hub, err := prepare()
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	// We retry the request 5 times, so this should eventually succeed.
+	storage.SetMaxFailures(2)
+
+	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
+	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
+	os.Setenv("SEMAPHORE_JOB_ID", "1")
+
+	tmpFile, _ := ioutil.TempFile("", "")
+	tmpFile.Write([]byte("file1"))
+
+	output, err := executeCommand("push", rootFolder, []string{tmpFile.Name(), "-d", "file1.txt", "-f"})
+	assert.Nil(t, err)
+	assert.Contains(t, output, "temporarily unavailable")
+	assert.Contains(t, output, "Successfully pushed artifact for current job")
+	assert.Equal(t, 3, storage.RequestCount)
+
+	os.Remove(tmpFile.Name())
+	hub.Close()
+	storage.Close()
+}
+
 func Test__Yank(t *testing.T) {
 	_, file, _, _ := runtime.Caller(0)
 	integrationFolder := filepath.Dir(file)
@@ -298,6 +474,60 @@ func Test__Yank(t *testing.T) {
 	storage.Close()
 }
 
+func Test__YankOn5xxFails(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	integrationFolder := filepath.Dir(file)
+	testFolder := filepath.Dir(integrationFolder)
+	rootFolder := filepath.Dir(testFolder)
+
+	storage, hub, err := prepare()
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	// We retry the request 5 times, so this should fail.
+	storage.SetMaxFailures(10)
+
+	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
+	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
+	os.Setenv("SEMAPHORE_JOB_ID", "1")
+
+	output, err := executeCommand("yank", rootFolder, []string{"file1.txt"})
+	assert.NotNil(t, err)
+	assert.Contains(t, output, "Error yanking artifact")
+
+	hub.Close()
+	storage.Close()
+}
+
+func Test__YankOn5xxEventuallySucceeds(t *testing.T) {
+	_, file, _, _ := runtime.Caller(0)
+	integrationFolder := filepath.Dir(file)
+	testFolder := filepath.Dir(integrationFolder)
+	rootFolder := filepath.Dir(testFolder)
+
+	storage, hub, err := prepare()
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	// We retry the request 5 times, so this should fail.
+	storage.SetMaxFailures(2)
+
+	os.Setenv("SEMAPHORE_ARTIFACT_TOKEN", "dummy")
+	os.Setenv("SEMAPHORE_ORGANIZATION_URL", hub.URL())
+	os.Setenv("SEMAPHORE_JOB_ID", "1")
+
+	output, err := executeCommand("yank", rootFolder, []string{"file1.txt"})
+	assert.Nil(t, err)
+	assert.Contains(t, output, "temporarily unavailable")
+	assert.Contains(t, output, "Successfully yanked 'artifacts/jobs/1/file1.txt' from current job artifacts.")
+	assert.Equal(t, 3, storage.RequestCount)
+
+	hub.Close()
+	storage.Close()
+}
+
 func prepare() (*testsupport.StorageMockServer, *testsupport.HubMockServer, error) {
 	storageServer, err := testsupport.NewStorageMockServer()
 	if err != nil {
@@ -313,6 +543,7 @@ func prepare() (*testsupport.StorageMockServer, *testsupport.HubMockServer, erro
 		{Name: "artifacts/jobs/1/two-levels/sub/file1.txt", Contents: "something"},
 		{Name: "artifacts/jobs/2/another.txt", Contents: "something"},
 	})
+
 	if err != nil {
 		storageServer.Close()
 		return nil, nil, err

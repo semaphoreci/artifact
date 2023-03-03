@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"net/http"
-
 	api "github.com/semaphoreci/artifact/pkg/api"
 	hub "github.com/semaphoreci/artifact/pkg/hub"
 	log "github.com/sirupsen/logrus"
@@ -25,7 +23,7 @@ func Yank(hubClient *hub.Client, name string) error {
 }
 
 func doYank(URLs []*api.SignedURL) error {
-	client := &http.Client{}
+	client := newHTTPClient()
 
 	for _, u := range URLs {
 		// The hub is not returning the method for yank operations, so we fill it here

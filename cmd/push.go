@@ -39,7 +39,7 @@ func runPushForCategory(cmd *cobra.Command, args []string, resolver *files.PathR
 	hubClient, err := hub.NewClient()
 	errutil.Check(err)
 
-	localSource, err := getSrc(cmd, args)
+	localSource, err := getSrc(args)
 	errutil.Check(err)
 
 	destinationOverride, err := cmd.Flags().GetString("destination")
@@ -125,7 +125,7 @@ func NewPushWorkflowCmd() *cobra.Command {
 				return
 			}
 
-			log.Info("Successfully pushed artifact for current job.\n")
+			log.Info("Successfully pushed artifact for current workflow.\n")
 			log.Infof("* Local source: %s.\n", paths.Source)
 			log.Infof("* Remote destination: %s.\n", paths.Destination)
 		},
@@ -160,7 +160,7 @@ func NewPushProjectCmd() *cobra.Command {
 				return
 			}
 
-			log.Info("Successfully pushed artifact for current job.\n")
+			log.Info("Successfully pushed artifact for current project.\n")
 			log.Infof("* Local source: %s.\n", paths.Source)
 			log.Infof("* Remote destination: %s.\n", paths.Destination)
 		},
@@ -181,22 +181,22 @@ func init() {
 	pushCmd.AddCommand(NewPushProjectCmd())
 }
 
-func getSrc(cmd *cobra.Command, args []string) (string, error) {
-	if shouldUseStdin() {
-		log.Debug("Detected stdin, saving it to a temporary file...")
+func getSrc(args []string) (string, error) {
+	input := args[0]
+	if shouldUseStdin(input) {
+		log.Debug("Detected stdin, saving it to a temporary file...\n")
 		return saveStdinToTempFile()
 	}
 
-	return args[0], nil
+	return input, nil
 }
 
-func shouldUseStdin() bool {
-	stat, err := os.Stdin.Stat()
-	if err != nil {
-		return false
+func shouldUseStdin(input string) bool {
+	if input == "-" || input == "/dev/stdin" {
+		return true
 	}
 
-	return (stat.Mode() & os.ModeCharDevice) == 0
+	return false
 }
 
 func saveStdinToTempFile() (string, error) {

@@ -1,6 +1,8 @@
 package hub
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -42,4 +44,76 @@ func Test__HubClientCreation(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, client)
 	})
+}
+
+func Test__GenerateSignedURL(t *testing.T) {
+
+	t.Run("response has invalid JSON", func(t *testing.T) {
+		noOfCalls := 0
+		mockArtifactHubServer := generateMockServer(&noOfCalls, 200, []byte(""))
+		defer mockArtifactHubServer.Close()
+
+		response, err := generateSignedURLsHelper(mockArtifactHubServer.URL)
+		assert.Nil(t, response)
+		assert.Equal(t, 1, noOfCalls)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "failed to decode signed URL http response")
+		}
+	})
+
+	t.Run("Retry only once when artifact hub returns 404", func(t *testing.T) {
+		noOfCalls := 0
+		mockArtifactHubServer := generateMockServer(&noOfCalls, 404, []byte("{}"))
+		defer mockArtifactHubServer.Close()
+
+		response, err := generateSignedURLsHelper(mockArtifactHubServer.URL)
+		assert.Nil(t, response)
+		assert.Equal(t, 1, noOfCalls)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "hub returned 404 status code")
+		}
+	})
+
+	t.Run("Retry only once when artifact hub returns 401", func(t *testing.T) {
+		noOfCalls := 0
+		mockArtifactHubServer := generateMockServer(&noOfCalls, 401, []byte("{}"))
+		defer mockArtifactHubServer.Close()
+
+		response, err := generateSignedURLsHelper(mockArtifactHubServer.URL)
+		assert.Nil(t, response)
+		assert.Equal(t, 1, noOfCalls)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "hub returned 401 status code")
+		}
+	})
+
+	t.Run("Retry 5 times when artifact hub returns 500", func(t *testing.T) {
+		noOfCalls := 0
+		mockArtifactHubServer := generateMockServer(&noOfCalls, 500, []byte("{}"))
+		defer mockArtifactHubServer.Close()
+
+		response, err := generateSignedURLsHelper(mockArtifactHubServer.URL)
+		assert.Nil(t, response)
+		assert.Equal(t, 5, noOfCalls)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "request did not return a non-5xx response")
+		}
+	})
+}
+
+func generateSignedURLsHelper(url string) (*GenerateSignedURLsResponse, error) {
+	client := Client{
+		URL:        url,
+		Token:      "",
+		HttpClient: &http.Client{},
+	}
+	return client.GenerateSignedURLs([]string{}, GenerateSignedURLsRequestPULL)
+}
+
+func generateMockServer(counter *int, codeToReturn int, responseBody []byte) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*counter++
+		w.WriteHeader(codeToReturn)
+		w.Write(responseBody)
+	}))
 }

@@ -18,6 +18,8 @@ type StorageMockServer struct {
 	Server           *httptest.Server
 	Handler          http.Handler
 	StorageDirectory string
+	MaxFailures      int
+	RequestCount     int
 }
 
 type FileMock struct {
@@ -34,6 +36,10 @@ func NewStorageMockServer() (*StorageMockServer, error) {
 	return &StorageMockServer{StorageDirectory: tmpStorageDir}, nil
 }
 
+func (m *StorageMockServer) SetMaxFailures(maxFailures int) {
+	m.MaxFailures = maxFailures
+}
+
 func (m *StorageMockServer) Init(files []FileMock) error {
 	err := m.createInitialFiles(files)
 	if err != nil {
@@ -41,6 +47,14 @@ func (m *StorageMockServer) Init(files []FileMock) error {
 	}
 
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m.RequestCount += 1
+
+		if m.RequestCount <= m.MaxFailures {
+			w.WriteHeader(503)
+			w.Write([]byte("temporarily unavailable"))
+			return
+		}
+
 		switch r.Method {
 		case "HEAD":
 			m.handleHEADRequest(w, r)
