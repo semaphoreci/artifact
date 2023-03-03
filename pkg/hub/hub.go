@@ -120,6 +120,7 @@ func createRequest(method, url, token string, reqBody interface{}) (*retryableht
 }
 
 func decodeResponse(httpResp *http.Response, response *GenerateSignedURLsResponse) error {
+	// #nosec
 	defer httpResp.Body.Close()
 
 	if !common.IsStatusOK(httpResp.StatusCode) {

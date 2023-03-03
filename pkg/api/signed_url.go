@@ -47,6 +47,7 @@ func (u *SignedURL) head(client *retryablehttp.Client, artifact *Artifact) error
 		return fmt.Errorf("error executing HEAD '%s': %v", u, err)
 	}
 
+	// #nosec
 	defer resp.Body.Close()
 
 	log.Debugf("HEAD request got %d response.\n", resp.StatusCode)
@@ -94,6 +95,7 @@ func (u *SignedURL) put(client *retryablehttp.Client, artifact *Artifact) error 
 		return fmt.Errorf("failed to execute http request: %v", err)
 	}
 
+	// #nosec
 	defer response.Body.Close()
 
 	log.Debugf("PUT request got %d response.\n", response.StatusCode)
@@ -151,6 +153,7 @@ func (u *SignedURL) get(client *retryablehttp.Client, artifact *Artifact) error 
 		)
 	}
 
+	// #nosec
 	defer response.Body.Close()
 
 	log.Debugf("Writing response to '%s'...\n", artifact.LocalPath)
@@ -187,6 +190,7 @@ func (u *SignedURL) delete(client *retryablehttp.Client, artifact *Artifact) err
 		return fmt.Errorf("failed to execute DELETE request: %v", err)
 	}
 
+	// #nosec
 	defer response.Body.Close()
 
 	log.Debugf("DELETE request got %d response.\n", response.StatusCode)
