@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -80,7 +79,7 @@ func (u *SignedURL) put(client *retryablehttp.Client, artifact *Artifact) error 
 	// See https://cs.opensource.google/go/go/+/refs/tags/go1.18.2:src/net/http/request.go;l=920
 	if fileInfo.Size() == 0 {
 		log.Debugf("'%s' is empty.\n", artifact.LocalPath)
-		contentBody = http.NoBody
+		contentBody = nil
 	}
 
 	log.Debugf("PUT '%s'...\n", u.URL)

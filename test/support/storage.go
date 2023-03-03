@@ -116,6 +116,15 @@ func (m *StorageMockServer) handleGETRequest(w http.ResponseWriter, r *http.Requ
 }
 
 func (m *StorageMockServer) handlePUTRequest(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("[STORAGE MOCK] Headers: %v\n", r.Header)
+
+	// S3 returns 501 if the Content-Length header to be set.
+	contentLength := r.Header.Get("Content-Length")
+	if contentLength == "" {
+		fmt.Printf("[STORAGE MOCK] [ERROR] No Content-Length HTTP header set.")
+		w.WriteHeader(501)
+	}
+
 	object := r.URL.Path[1:]
 	err := m.addFile(object, r.Body)
 	if err != nil {
