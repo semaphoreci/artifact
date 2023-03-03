@@ -47,6 +47,7 @@ func (u *SignedURL) head(client *retryablehttp.Client, artifact *Artifact) error
 		return fmt.Errorf("error executing HEAD '%s': %v", u, err)
 	}
 
+	// #nosec
 	defer resp.Body.Close()
 
 	log.Debugf("HEAD request got %d response.\n", resp.StatusCode)
@@ -65,6 +66,7 @@ func (u *SignedURL) put(client *retryablehttp.Client, artifact *Artifact) error 
 		return fmt.Errorf("failed to open '%s': %v", artifact.LocalPath, err)
 	}
 
+	// #nosec
 	defer f.Close()
 
 	fileInfo, err := f.Stat()
@@ -93,6 +95,7 @@ func (u *SignedURL) put(client *retryablehttp.Client, artifact *Artifact) error 
 		return fmt.Errorf("failed to execute http request: %v", err)
 	}
 
+	// #nosec
 	defer response.Body.Close()
 
 	log.Debugf("PUT request got %d response.\n", response.StatusCode)
@@ -112,6 +115,8 @@ func (u *SignedURL) get(client *retryablehttp.Client, artifact *Artifact) error 
 	log.Debugf("GET '%s'...\n", u.URL)
 
 	parentDir := filepath.Dir(artifact.LocalPath)
+
+	// #nosec
 	err := os.MkdirAll(parentDir, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create parent directory '%s': %v", parentDir, err)
@@ -122,6 +127,7 @@ func (u *SignedURL) get(client *retryablehttp.Client, artifact *Artifact) error 
 		return fmt.Errorf("failed to create local file '%s': %v", artifact.LocalPath, err)
 	}
 
+	// #nosec
 	defer f.Close()
 
 	req, err := retryablehttp.NewRequest("GET", u.URL, nil)
@@ -147,6 +153,7 @@ func (u *SignedURL) get(client *retryablehttp.Client, artifact *Artifact) error 
 		)
 	}
 
+	// #nosec
 	defer response.Body.Close()
 
 	log.Debugf("Writing response to '%s'...\n", artifact.LocalPath)
@@ -183,6 +190,7 @@ func (u *SignedURL) delete(client *retryablehttp.Client, artifact *Artifact) err
 		return fmt.Errorf("failed to execute DELETE request: %v", err)
 	}
 
+	// #nosec
 	defer response.Body.Close()
 
 	log.Debugf("DELETE request got %d response.\n", response.StatusCode)

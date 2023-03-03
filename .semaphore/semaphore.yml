@@ -5,7 +5,28 @@ agent:
     type: e1-standard-2
     os_image: ubuntu1804
 blocks:
-  - name: "Build & Test"
+  - name: "Security checks"
+    task:
+      secrets:
+        - name: security-toolbox-shared-read-access
+      prologue:
+        commands:
+          - checkout
+          - mv ~/.ssh/security-toolbox ~/.ssh/id_rsa
+          - sudo chmod 600 ~/.ssh/id_rsa
+      epilogue:
+        always:
+          commands:
+            - if [ -f results.xml ]; then test-results publish results.xml; fi
+      jobs:
+        - name: Check dependencies
+          commands:
+            - make check.deps
+        - name: Check code
+          commands:
+            - make check.static
+
+  - name: "Test"
     task:
       env_vars:
         - name: GO111MODULE
@@ -14,7 +35,7 @@ blocks:
         - name: Unit tests
           commands:
             - checkout
-            - sem-version go 1.16
+            - sem-version go 1.18
             - go install gotest.tools/gotestsum@latest
             - make go.get
             - make build
