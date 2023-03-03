@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 
@@ -70,7 +69,7 @@ func buildArtifacts(signedURLs []*api.SignedURL, paths *files.ResolvedPath, forc
 }
 
 func doPull(force bool, artifacts []*api.Artifact, signedURLs []*api.SignedURL) error {
-	client := &http.Client{}
+	client := newHTTPClient()
 
 	for _, artifact := range artifacts {
 		for _, signedURL := range artifact.URLs {

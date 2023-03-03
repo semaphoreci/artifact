@@ -51,7 +51,7 @@ func NewYankJobCmd() *cobra.Command {
 				return
 			}
 
-			log.Infof("Successfully yanked '%s' from current job artifacts.\n", paths)
+			log.Infof("Successfully yanked '%s' from current job artifacts.\n", paths.Source)
 		},
 	}
 
@@ -81,7 +81,7 @@ func NewYankWorkflowCmd() *cobra.Command {
 				return
 			}
 
-			log.Infof("Successfully yanked '%s' from current workflow artifacts.\n", paths)
+			log.Infof("Successfully yanked '%s' from current workflow artifacts.\n", paths.Source)
 		},
 	}
 

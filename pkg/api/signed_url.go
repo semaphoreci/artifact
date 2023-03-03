@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/semaphoreci/artifact/pkg/common"
 	log "github.com/sirupsen/logrus"
 )
@@ -19,7 +20,7 @@ type SignedURL struct {
 	Method string `json:"method,omitempty"`
 }
 
-func (u *SignedURL) Follow(client *http.Client, artifact *Artifact) error {
+func (u *SignedURL) Follow(client *retryablehttp.Client, artifact *Artifact) error {
 	switch u.Method {
 	case "HEAD":
 		return u.head(client, artifact)
@@ -38,7 +39,7 @@ func (u *SignedURL) Follow(client *http.Client, artifact *Artifact) error {
 	}
 }
 
-func (u *SignedURL) head(client *http.Client, artifact *Artifact) error {
+func (u *SignedURL) head(client *retryablehttp.Client, artifact *Artifact) error {
 	log.Debugf("HEAD '%s'...\n", u.URL)
 
 	resp, err := client.Head(u.URL)
@@ -56,7 +57,7 @@ func (u *SignedURL) head(client *http.Client, artifact *Artifact) error {
 	return nil
 }
 
-func (u *SignedURL) put(client *http.Client, artifact *Artifact) error {
+func (u *SignedURL) put(client *retryablehttp.Client, artifact *Artifact) error {
 	log.Debugf("Opening '%s' for upload...\n", artifact.LocalPath)
 
 	f, err := os.Open(artifact.LocalPath)
@@ -81,7 +82,7 @@ func (u *SignedURL) put(client *http.Client, artifact *Artifact) error {
 	}
 
 	log.Debugf("PUT '%s'...\n", u.URL)
-	req, err := http.NewRequest("PUT", u.URL, contentBody)
+	req, err := retryablehttp.NewRequest("PUT", u.URL, contentBody)
 	if err != nil {
 		return fmt.Errorf("failed to create new http request: %v", err)
 	}
@@ -96,13 +97,18 @@ func (u *SignedURL) put(client *http.Client, artifact *Artifact) error {
 
 	log.Debugf("PUT request got %d response.\n", response.StatusCode)
 	if !common.IsStatusOK(response.StatusCode) {
-		return fmt.Errorf("request failed with %d", response.StatusCode)
+		return fmt.Errorf(
+			"%s request to %s failed with %d status code",
+			u.Method,
+			u.URL,
+			response.StatusCode,
+		)
 	}
 
 	return nil
 }
 
-func (u *SignedURL) get(client *http.Client, artifact *Artifact) error {
+func (u *SignedURL) get(client *retryablehttp.Client, artifact *Artifact) error {
 	log.Debugf("GET '%s'...\n", u.URL)
 
 	parentDir := filepath.Dir(artifact.LocalPath)
@@ -118,19 +124,27 @@ func (u *SignedURL) get(client *http.Client, artifact *Artifact) error {
 
 	defer f.Close()
 
-	req, err := http.NewRequest("GET", u.URL, nil)
+	req, err := retryablehttp.NewRequest("GET", u.URL, nil)
 	if err != nil {
+		u.closeFile(f, true)
 		return fmt.Errorf("failed to create GET request: %v", err)
 	}
 
 	response, err := client.Do(req)
 	if err != nil {
+		u.closeFile(f, true)
 		return fmt.Errorf("failed to execute GET request: %v", err)
 	}
 
 	log.Debugf("GET request got %d response.\n", response.StatusCode)
 	if !common.IsStatusOK(response.StatusCode) {
-		return fmt.Errorf("GET failed with %d", response.StatusCode)
+		u.closeFile(f, true)
+		return fmt.Errorf(
+			"%s request to %s failed with %d status code",
+			u.Method,
+			u.URL,
+			response.StatusCode,
+		)
 	}
 
 	defer response.Body.Close()
@@ -140,13 +154,26 @@ func (u *SignedURL) get(client *http.Client, artifact *Artifact) error {
 		return fmt.Errorf("failed to read HTTP response: %v", err)
 	}
 
+	u.closeFile(f, false)
 	return nil
 }
 
-func (u *SignedURL) delete(client *http.Client, artifact *Artifact) error {
+func (u *SignedURL) closeFile(f *os.File, remove bool) {
+	if err := f.Close(); err != nil {
+		log.Errorf("Error closing file '%s': %v", f.Name(), err)
+	}
+
+	if remove {
+		if err := os.Remove(f.Name()); err != nil {
+			log.Errorf("Error removing file '%s': %v", f.Name(), err)
+		}
+	}
+}
+
+func (u *SignedURL) delete(client *retryablehttp.Client, artifact *Artifact) error {
 	log.Debugf("DELETE '%s'...\n", u.URL)
 
-	req, err := http.NewRequest("DELETE", u.URL, nil)
+	req, err := retryablehttp.NewRequest("DELETE", u.URL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create DELETE request: %v", err)
 	}
@@ -160,7 +187,12 @@ func (u *SignedURL) delete(client *http.Client, artifact *Artifact) error {
 
 	log.Debugf("DELETE request got %d response.\n", response.StatusCode)
 	if !common.IsStatusOK(response.StatusCode) {
-		return fmt.Errorf("GET failed with %d", response.StatusCode)
+		return fmt.Errorf(
+			"%s request to %s failed with %d status code",
+			u.Method,
+			u.URL,
+			response.StatusCode,
+		)
 	}
 
 	return nil

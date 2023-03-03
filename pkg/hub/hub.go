@@ -84,10 +84,14 @@ func (c *Client) GenerateSignedURLs(remotePaths []string, requestType GenerateSi
 	if err != nil {
 		return nil, err
 	}
+
 	retryClient := retryablehttp.NewClient()
+
 	// 4 retries means 5 requests in total
 	retryClient.RetryMax = 4
 	retryClient.RetryWaitMax = 1 * time.Second
+	retryClient.Logger = &leveledLogger{}
+
 	httpResp, err := retryClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request did not return a non-5xx response: %v", err)
@@ -131,4 +135,24 @@ func decodeResponse(httpResp *http.Response, response *GenerateSignedURLsRespons
 	}
 
 	return nil
+}
+
+// the logrus logger does not match the retryablehttp.LeveledLogger interface,
+// so we need to use a thin wrapper on top of the logrus one.
+type leveledLogger struct{}
+
+func (l *leveledLogger) Error(msg string, keysAndValues ...interface{}) {
+	log.Error(msg, keysAndValues, "\n")
+}
+
+func (l *leveledLogger) Info(msg string, keysAndValues ...interface{}) {
+	log.Info(msg, keysAndValues, "\n")
+}
+
+func (l *leveledLogger) Debug(msg string, keysAndValues ...interface{}) {
+	log.Debug(msg, keysAndValues, "\n")
+}
+
+func (l *leveledLogger) Warn(msg string, keysAndValues ...interface{}) {
+	log.Warn(msg, keysAndValues, "\n")
 }

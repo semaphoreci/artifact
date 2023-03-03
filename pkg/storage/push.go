@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -133,7 +132,7 @@ func attachURLs(items []*api.Artifact, signedURLs []*api.SignedURL, force bool) 
 }
 
 func doPush(force bool, artifacts []*api.Artifact, signedURLs []*api.SignedURL) error {
-	client := &http.Client{}
+	client := newHTTPClient()
 
 	for _, artifact := range artifacts {
 		for _, signedURL := range artifact.URLs {
