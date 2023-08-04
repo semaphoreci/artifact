@@ -20,13 +20,13 @@ check.deps: check.prepare
 		bash -c 'cd /app && $(SECURITY_TOOLBOX_TMP_DIR)/dependencies --language go -d'
 
 go.get:
-	go get ./...
+	docker-compose run --rm cli go get ./...
 
 go.fmt:
-	go fmt ./...
+	docker-compose run --rm cli go fmt ./...
 
 test:
-	gotestsum --format short-verbose --junitfile junit-report.xml --packages="./..." -- -p 1
+	docker-compose run --rm cli gotestsum --format short-verbose --junitfile junit-report.xml --packages="./..." -- -p 1
 
 build:
-	env GOOS=$(OS) GOARCH=$(ARCH) go build -o artifact
+	docker-compose run --rm cli env GOOS=$(OS) GOARCH=$(ARCH) go build -o artifact
