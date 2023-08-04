@@ -1,4 +1,4 @@
-.PHONY: build
+.PHONY: build test
 
 SECURITY_TOOLBOX_BRANCH ?= master
 SECURITY_TOOLBOX_TMP_DIR ?= /tmp/security-toolbox
