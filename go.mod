@@ -1,6 +1,6 @@
 module github.com/semaphoreci/artifact
 
-go 1.18
+go 1.20
 
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.2
