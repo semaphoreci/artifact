@@ -8,6 +8,7 @@ builds:
   - id: non-windows-build
     env:
     - CGO_ENABLED=0
+    - GOFLAGS=-buildvcs=false
     goos:
       - linux
       - darwin
@@ -19,6 +20,7 @@ builds:
   - id: windows-build
     env:
     - CGO_ENABLED=0
+    - GOFLAGS=-buildvcs=false
     ldflags:
       - -s -w -X main.VERSION={{.Tag}}
     goos:

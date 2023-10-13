@@ -28,5 +28,8 @@ go.fmt:
 test:
 	docker-compose run --rm cli gotestsum --format short-verbose --junitfile junit-report.xml --packages="./..." -- -p 1
 
+# Go 1.20 changed the handling of git worktrees,
+# so we need to pass buildvcs=false, for now.
+# See: https://github.com/golang/go/issues/59068
 build:
-	docker-compose run --rm cli env GOOS=$(OS) GOARCH=$(ARCH) go build -o artifact
+	docker-compose run --rm cli env GOFLAGS=-buildvcs=false GOOS=$(OS) GOARCH=$(ARCH) go build -o artifact
