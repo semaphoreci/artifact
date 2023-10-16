@@ -289,6 +289,7 @@ func (m *StorageMockServer) addFile(fileName string, reader io.ReadCloser) error
 		return err
 	}
 
+	// #nosec
 	newFile, err := os.Create(filePath)
 	if err != nil {
 		return err
