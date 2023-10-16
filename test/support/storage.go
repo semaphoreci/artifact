@@ -1,4 +1,3 @@
-// #nosec
 package testsupport
 
 import (
@@ -51,7 +50,7 @@ func (m *StorageMockServer) Init(files []FileMock) error {
 
 		if m.RequestCount <= m.MaxFailures {
 			w.WriteHeader(503)
-			w.Write([]byte("temporarily unavailable"))
+			_, _ = w.Write([]byte("temporarily unavailable"))
 			return
 		}
 
@@ -77,12 +76,14 @@ func (m *StorageMockServer) Init(files []FileMock) error {
 func (m *StorageMockServer) createInitialFiles(files []FileMock) error {
 	for _, file := range files {
 		parentDir := m.filePath(filepath.Dir(file.Name))
+
+		// #nosec
 		err := os.MkdirAll(parentDir, 0755)
 		if err != nil {
 			return err
 		}
 
-		err = ioutil.WriteFile(m.filePath(file.Name), []byte(file.Contents), 0755)
+		err = ioutil.WriteFile(m.filePath(file.Name), []byte(file.Contents), 0600)
 		if err != nil {
 			return err
 		}
@@ -109,7 +110,7 @@ func (m *StorageMockServer) handleGETRequest(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		w.Write(contents)
+		_, _ = w.Write(contents)
 	} else {
 		w.WriteHeader(404)
 	}
@@ -280,8 +281,10 @@ func (m *StorageMockServer) findFilesInDir(path string) ([]string, error) {
 }
 
 func (m *StorageMockServer) addFile(fileName string, reader io.ReadCloser) error {
+
+	// #nosec
 	filePath := m.filePath(fileName)
-	err := os.MkdirAll(filepath.Dir(filePath), 0755)
+	err := os.MkdirAll(filepath.Dir(filePath), 0750)
 	if err != nil {
 		return err
 	}
