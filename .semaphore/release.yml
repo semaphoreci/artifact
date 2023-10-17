@@ -21,4 +21,4 @@ blocks:
       jobs:
       - name: Artifact release
         commands:
-          - curl -sL https://git.io/goreleaser | bash -s -- --rm-dist
+          - curl -sL https://git.io/goreleaser | bash -s -- --clean
