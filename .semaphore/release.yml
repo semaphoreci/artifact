@@ -14,7 +14,7 @@ blocks:
         - name: github-release-bot-artifact
       prologue:
         commands:
-          - sem-version go 1.18
+          - sem-version go 1.20
           - "export GOPATH=~/go"
           - "export PATH=~/go/bin:$PATH"
           - checkout
