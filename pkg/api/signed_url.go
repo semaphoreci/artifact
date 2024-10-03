@@ -239,10 +239,15 @@ func parseGoogleStorageURL(URL *url.URL) (string, error) {
 	return parsed[1], nil
 }
 
-// S3 URLs follow the format 'https://<bucket-name>.s3.<region>.amazonaws.com/<path>'
-// Note: S3 URLs use the project id as a prefix, so we take that into account here as well
+// S3 URLs can be in two formats:
+// 1. With a region: 'https://<bucket-name>.s3.<region>.amazonaws.com/<path>'
+// 2. Without a region: 'https://<bucket-name>.s3.amazonaws.com/<path>'
+// We accept both formats here.
+//
+// Note: the hub's S3 URLs use the Semaphore project ID as a prefix,
+// so we take that into account here as well.
 func parseS3URL(URL *url.URL) (string, error) {
-	re := regexp.MustCompile(`https:\/\/(.+)\.s3\.(.+)\.amazonaws\.com\/[a-z0-9\-]+\/([^?]+)\?`)
+	re := regexp.MustCompile(`https:\/\/(.+)\.s3\.?(.+)?\.amazonaws\.com\/[a-z0-9\-]+\/([^?]+)\?`)
 	parsed := re.FindStringSubmatch(URL.String())
 	if len(parsed) < 4 {
 		log.Warn("Failed to parse S3 URL.\n")

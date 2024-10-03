@@ -28,8 +28,22 @@ func Test__GetObject(t *testing.T) {
 		assert.Equal(t, "artifacts/project/projectid/myfile.txt", obj)
 	})
 
+	t.Run("S3 with region-less URL - file", func(t *testing.T) {
+		signedURL := SignedURL{URL: "https://my-bucket1.s3.amazonaws.com/projectid/artifacts/project/projectid/myfile.txt?X-Amz-Whatever"}
+		obj, err := signedURL.GetObject()
+		assert.Nil(t, err)
+		assert.Equal(t, "artifacts/project/projectid/myfile.txt", obj)
+	})
+
 	t.Run("S3 - file inside directory", func(t *testing.T) {
 		signedURL := SignedURL{URL: "https://my-bucket1.s3.us-east-1.amazonaws.com/projectid/artifacts/project/projectid/mydir/myfile.txt?X-Amz-Whatever"}
+		obj, err := signedURL.GetObject()
+		assert.Nil(t, err)
+		assert.Equal(t, "artifacts/project/projectid/mydir/myfile.txt", obj)
+	})
+
+	t.Run("S3 with region-less URL - file inside directory", func(t *testing.T) {
+		signedURL := SignedURL{URL: "https://my-bucket1.s3.amazonaws.com/projectid/artifacts/project/projectid/mydir/myfile.txt?X-Amz-Whatever"}
 		obj, err := signedURL.GetObject()
 		assert.Nil(t, err)
 		assert.Equal(t, "artifacts/project/projectid/mydir/myfile.txt", obj)
