@@ -49,7 +49,7 @@ func NewPathResolver(resourceType, resourceId string) (*PathResolver, error) {
 	case ResourceTypeJob:
 		id := id(os.Getenv("SEMAPHORE_JOB_ID"), resourceId)
 		if id == "" {
-			return nil, fmt.Errorf("project ID is not set. Please use the SEMAPHORE_JOB_ID environment variable or the --job-id parameter to configure it")
+			return nil, fmt.Errorf("job ID is not set. Please use the SEMAPHORE_JOB_ID environment variable or the --job-id parameter to configure it")
 		}
 
 		return &PathResolver{
