@@ -63,8 +63,22 @@ func Test__GetObject(t *testing.T) {
 		assert.Equal(t, "artifacts/project/projectid/mydir/myfile.txt", obj)
 	})
 
-	t.Run("bad host", func(t *testing.T) {
-		signedURL := SignedURL{URL: "https://somehost.com/projectid/artifacts/project/projectid/myfile.txt"}
+	t.Run("custom domain - file", func(t *testing.T) {
+		signedURL := SignedURL{URL: "https://artifacts.somedomain.com/my-bucket1/projectid/artifacts/project/projectid/myfile.txt?X-Amz-Algorithm"}
+		obj, err := signedURL.GetObject()
+		assert.Nil(t, err)
+		assert.Equal(t, "artifacts/project/projectid/myfile.txt", obj)
+	})
+
+	t.Run("custom domain - file inside directory", func(t *testing.T) {
+		signedURL := SignedURL{URL: "https://artifacts.somedomain.com/my-bucket1/projectid/artifacts/project/projectid/mydir/myfile.txt?Expires=231256754712"}
+		obj, err := signedURL.GetObject()
+		assert.Nil(t, err)
+		assert.Equal(t, "artifacts/project/projectid/mydir/myfile.txt", obj)
+	})
+
+	t.Run("bad URL", func(t *testing.T) {
+		signedURL := SignedURL{URL: "http://somehost.com/projectid/artifacts/project/projectid/myfile.txt"}
 		_, err := signedURL.GetObject()
 		assert.NotNil(t, err)
 	})

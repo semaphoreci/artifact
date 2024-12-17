@@ -14,6 +14,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	customDomainRegex = regexp.MustCompile(`https:\/\/[a-z0-9\-\.]+\/[a-z0-9\-]+\/[a-z0-9\-]+\/([^?]+)\?`)
+)
+
 type SignedURL struct {
 	URL    string `json:"url,omitempty"`
 	Method string `json:"method,omitempty"`
@@ -221,6 +225,10 @@ func (u *SignedURL) GetObject() (string, error) {
 		log.Debugf("Parsing localhost URL: %s\n", u.URL)
 		return parseLocalhostURL(URL)
 
+	case customDomainRegex.Match([]byte(URL.String())):
+		log.Debugf("Parsing custom domain URL: %s\n", u.URL)
+		return parseCustomDomainURL(URL)
+
 	default:
 		log.Warnf("Failed to parse URL '%s' - unrecognized host '%s'\n", u.URL, host)
 		return "", fmt.Errorf("unrecognized host %s", host)
@@ -255,6 +263,18 @@ func parseS3URL(URL *url.URL) (string, error) {
 	}
 
 	return parsed[3], nil
+}
+
+// Custom domain URLs are used when minio or some other s3-compatible storage is being used.
+// The URL will be of the form: https://<domain>/<bucket>/<semaphore-project-id>/<path>
+// We are only interested in the <path> part here.
+func parseCustomDomainURL(URL *url.URL) (string, error) {
+	parsed := customDomainRegex.FindStringSubmatch(URL.String())
+	if len(parsed) < 2 {
+		return "", fmt.Errorf("Failed to parse custom domain URL '%s'\n", URL)
+	}
+
+	return parsed[1], nil
 }
 
 // Localhost URLs are used during tests
