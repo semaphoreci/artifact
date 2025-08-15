@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/files"
 	"github.com/semaphoreci/artifact/pkg/hub"
@@ -18,7 +19,7 @@ artifact push. With artifact pull you can download them to the current directory
 to use them in a later phase, debug, or getting the results.`,
 }
 
-func runPullForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, error) {
+func runPullForCategory(cmd *cobra.Command, args []string, resolver *files.PathResolver) (*files.ResolvedPath, *storage.PullStats, error) {
 	destinationOverride, err := cmd.Flags().GetString("destination")
 	errutil.Check(err)
 
@@ -49,7 +50,7 @@ func NewPullJobCmd() *cobra.Command {
 			resolver, err := files.NewPathResolver(files.ResourceTypeJob, jobId)
 			errutil.Check(err)
 
-			paths, err := runPullForCategory(cmd, args, resolver)
+			paths, stats, err := runPullForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pulling artifact: %v\n", err)
 				log.Error("Please check if the artifact you are trying to pull exists.\n")
@@ -60,6 +61,7 @@ func NewPullJobCmd() *cobra.Command {
 			log.Info("Successfully pulled artifact for current job.\n")
 			log.Infof("* Remote source: '%s'.\n", paths.Source)
 			log.Infof("* Local destination: '%s'.\n", paths.Destination)
+			log.Infof("Pulled %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
 		},
 	}
 
@@ -83,7 +85,7 @@ func NewPullWorkflowCmd() *cobra.Command {
 			resolver, err := files.NewPathResolver(files.ResourceTypeWorkflow, workflowId)
 			errutil.Check(err)
 
-			paths, err := runPullForCategory(cmd, args, resolver)
+			paths, stats, err := runPullForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pulling artifact: %v\n", err)
 				log.Error("Please check if the artifact you are trying to pull exists.\n")
@@ -94,6 +96,7 @@ func NewPullWorkflowCmd() *cobra.Command {
 			log.Info("Successfully pulled artifact for current workflow.\n")
 			log.Infof("* Remote source: '%s'.\n", paths.Source)
 			log.Infof("* Local destination: '%s'.\n", paths.Destination)
+			log.Infof("Pulled %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
 		},
 	}
 
@@ -117,7 +120,7 @@ func NewPullProjectCmd() *cobra.Command {
 			resolver, err := files.NewPathResolver(files.ResourceTypeProject, projectId)
 			errutil.Check(err)
 
-			paths, err := runPullForCategory(cmd, args, resolver)
+			paths, stats, err := runPullForCategory(cmd, args, resolver)
 			if err != nil {
 				log.Errorf("Error pulling artifact: %v\n", err)
 				log.Error("Please check if the artifact you are trying to pull exists.\n")
@@ -128,6 +131,7 @@ func NewPullProjectCmd() *cobra.Command {
 			log.Info("Successfully pulled artifact for current project.\n")
 			log.Infof("* Remote source: '%s'.\n", paths.Source)
 			log.Infof("* Local destination: '%s'.\n", paths.Destination)
+			log.Infof("Pulled %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
 		},
 	}
 
@@ -135,6 +139,20 @@ func NewPullProjectCmd() *cobra.Command {
 	cmd.Flags().BoolP("force", "f", false, "force overwrite")
 	cmd.Flags().StringP("project-id", "p", "", "set explicit project id")
 	return cmd
+}
+
+// formatBytes converts bytes to human readable format
+func formatBytes(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
 func init() {
