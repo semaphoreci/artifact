@@ -99,6 +99,15 @@ func Test__GenerateSignedURL(t *testing.T) {
 			assert.Contains(t, err.Error(), "request did not return a non-5xx response")
 		}
 	})
+
+	t.Run("Check if http_proxy enviroment variable is used", func(t *testing.T) {
+		noOfCalls := 0
+		mockArtifactHubServer := generateMockServer(&noOfCalls, 500, []byte("{}"))
+		defer mockArtifactHubServer.Close()
+
+		generateSignedURLsHelper(mockArtifactHubServer.URL)
+
+	})
 }
 
 func generateSignedURLsHelper(url string) (*GenerateSignedURLsResponse, error) {

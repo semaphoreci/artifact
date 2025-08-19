@@ -172,3 +172,27 @@ func assertFileDoesNotExist(t *testing.T, fileName string) {
 	_, err := os.Stat(fileName)
 	assert.True(t, os.IsNotExist(err))
 }
+
+func Test__formatBytes(t *testing.T) {
+	testCases := []struct {
+		name     string
+		bytes    int64
+		expected string
+	}{
+		{"zero bytes", 0, "0 B"},
+		{"small bytes", 512, "512 B"},
+		{"exactly 1KB", 1024, "1.0 KB"},
+		{"1.5KB", 1536, "1.5 KB"},
+		{"exactly 1MB", 1024*1024, "1.0 MB"},
+		{"498MB", 498*1024*1024, "498.0 MB"},
+		{"1.2GB", int64(1288490188), "1.2 GB"},
+		{"large size", 5*1024*1024*1024*1024, "5.0 TB"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := formatBytes(tc.bytes)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}

@@ -17,10 +17,15 @@ type PullOptions struct {
 	Force               bool
 }
 
-func Pull(hubClient *hub.Client, resolver *files.PathResolver, options PullOptions) (*files.ResolvedPath, error) {
+type PullStats struct {
+	FileCount int
+	TotalSize int64
+}
+
+func Pull(hubClient *hub.Client, resolver *files.PathResolver, options PullOptions) (*files.ResolvedPath, *PullStats, error) {
 	paths, err := resolver.Resolve(files.OperationPull, options.SourcePath, options.DestinationOverride)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	log.Debug("Pulling...\n")
@@ -30,15 +35,20 @@ func Pull(hubClient *hub.Client, resolver *files.PathResolver, options PullOptio
 
 	response, err := hubClient.GenerateSignedURLs([]string{paths.Source}, hub.GenerateSignedURLsRequestPULL)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	artifacts, err := buildArtifacts(response.Urls, paths, options.Force)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return paths, doPull(options.Force, artifacts, response.Urls)
+	stats, err := doPull(options.Force, artifacts, response.Urls)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return paths, stats, nil
 }
 
 func buildArtifacts(signedURLs []*api.SignedURL, paths *files.ResolvedPath, force bool) ([]*api.Artifact, error) {
@@ -68,16 +78,23 @@ func buildArtifacts(signedURLs []*api.SignedURL, paths *files.ResolvedPath, forc
 	return artifacts, nil
 }
 
-func doPull(force bool, artifacts []*api.Artifact, signedURLs []*api.SignedURL) error {
+func doPull(force bool, artifacts []*api.Artifact, signedURLs []*api.SignedURL) (*PullStats, error) {
 	client := newHTTPClient()
+	stats := &PullStats{}
 
 	for _, artifact := range artifacts {
 		for _, signedURL := range artifact.URLs {
 			if err := signedURL.Follow(client, artifact); err != nil {
-				return err
+				return nil, err
+			}
+			
+			// Get file size after successful download
+			if fileInfo, err := os.Stat(artifact.LocalPath); err == nil {
+				stats.FileCount++
+				stats.TotalSize += fileInfo.Size()
 			}
 		}
 	}
 
-	return nil
+	return stats, nil
 }
