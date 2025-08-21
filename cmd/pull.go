@@ -60,7 +60,7 @@ func NewPullJobCmd() *cobra.Command {
 			log.Info("Successfully pulled artifact for current job.\n")
 			log.Infof("* Remote source: '%s'.\n", paths.Source)
 			log.Infof("* Local destination: '%s'.\n", paths.Destination)
-			log.Infof("Pulled %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
+			log.Infof("Pulled %d %s. Total of %s\n", stats.FileCount, pluralize(stats.FileCount, "file", "files"), formatBytes(stats.TotalSize))
 		},
 	}
 
@@ -95,7 +95,7 @@ func NewPullWorkflowCmd() *cobra.Command {
 			log.Info("Successfully pulled artifact for current workflow.\n")
 			log.Infof("* Remote source: '%s'.\n", paths.Source)
 			log.Infof("* Local destination: '%s'.\n", paths.Destination)
-			log.Infof("Pulled %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
+			log.Infof("Pulled %d %s. Total of %s\n", stats.FileCount, pluralize(stats.FileCount, "file", "files"), formatBytes(stats.TotalSize))
 		},
 	}
 
@@ -130,7 +130,7 @@ func NewPullProjectCmd() *cobra.Command {
 			log.Info("Successfully pulled artifact for current project.\n")
 			log.Infof("* Remote source: '%s'.\n", paths.Source)
 			log.Infof("* Local destination: '%s'.\n", paths.Destination)
-			log.Infof("Pulled %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
+			log.Infof("Pulled %d %s. Total of %s\n", stats.FileCount, pluralize(stats.FileCount, "file", "files"), formatBytes(stats.TotalSize))
 		},
 	}
 

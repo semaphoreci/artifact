@@ -93,7 +93,7 @@ func NewPushJobCmd() *cobra.Command {
 			log.Info("Successfully pushed artifact for current job.\n")
 			log.Infof("* Local source: %s.\n", paths.Source)
 			log.Infof("* Remote destination: %s.\n", paths.Destination)
-			log.Infof("Pushed %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
+			log.Infof("Pushed %d %s. Total of %s\n", stats.FileCount, pluralize(stats.FileCount, "file", "files"), formatBytes(stats.TotalSize))
 		},
 	}
 
@@ -129,7 +129,7 @@ func NewPushWorkflowCmd() *cobra.Command {
 			log.Info("Successfully pushed artifact for current workflow.\n")
 			log.Infof("* Local source: %s.\n", paths.Source)
 			log.Infof("* Remote destination: %s.\n", paths.Destination)
-			log.Infof("Pushed %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
+			log.Infof("Pushed %d %s. Total of %s\n", stats.FileCount, pluralize(stats.FileCount, "file", "files"), formatBytes(stats.TotalSize))
 		},
 	}
 
@@ -165,7 +165,7 @@ func NewPushProjectCmd() *cobra.Command {
 			log.Info("Successfully pushed artifact for current project.\n")
 			log.Infof("* Local source: %s.\n", paths.Source)
 			log.Infof("* Remote destination: %s.\n", paths.Destination)
-			log.Infof("Pushed %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
+			log.Infof("Pushed %d %s. Total of %s\n", stats.FileCount, pluralize(stats.FileCount, "file", "files"), formatBytes(stats.TotalSize))
 		},
 	}
 
