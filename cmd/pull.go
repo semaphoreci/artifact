@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/files"
 	"github.com/semaphoreci/artifact/pkg/hub"
@@ -141,19 +140,6 @@ func NewPullProjectCmd() *cobra.Command {
 	return cmd
 }
 
-// formatBytes converts bytes to human readable format
-func formatBytes(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
-	}
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
-}
 
 func init() {
 	rootCmd.AddCommand(pullCmd)

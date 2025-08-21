@@ -43,7 +43,7 @@ func Pull(hubClient *hub.Client, resolver *files.PathResolver, options PullOptio
 		return nil, nil, err
 	}
 
-	stats, err := doPull(options.Force, artifacts, response.Urls)
+	stats, err := doPull(artifacts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -78,7 +78,7 @@ func buildArtifacts(signedURLs []*api.SignedURL, paths *files.ResolvedPath, forc
 	return artifacts, nil
 }
 
-func doPull(force bool, artifacts []*api.Artifact, signedURLs []*api.SignedURL) (*PullStats, error) {
+func doPull(artifacts []*api.Artifact) (*PullStats, error) {
 	client := newHTTPClient()
 	stats := &PullStats{}
 
@@ -87,7 +87,7 @@ func doPull(force bool, artifacts []*api.Artifact, signedURLs []*api.SignedURL) 
 			if err := signedURL.Follow(client, artifact); err != nil {
 				return nil, err
 			}
-			
+
 			// Get file size after successful download
 			if fileInfo, err := os.Stat(artifact.LocalPath); err == nil {
 				stats.FileCount++
