@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	errutil "github.com/semaphoreci/artifact/pkg/errors"
 	"github.com/semaphoreci/artifact/pkg/files"
 	"github.com/semaphoreci/artifact/pkg/hub"
@@ -61,7 +60,7 @@ func NewPullJobCmd() *cobra.Command {
 			log.Info("Successfully pulled artifact for current job.\n")
 			log.Infof("* Remote source: '%s'.\n", paths.Source)
 			log.Infof("* Local destination: '%s'.\n", paths.Destination)
-			log.Infof("Pulled %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
+			log.Infof("Pulled %d %s. Total of %s\n", stats.FileCount, pluralize(stats.FileCount, "file", "files"), formatBytes(stats.TotalSize))
 		},
 	}
 
@@ -96,7 +95,7 @@ func NewPullWorkflowCmd() *cobra.Command {
 			log.Info("Successfully pulled artifact for current workflow.\n")
 			log.Infof("* Remote source: '%s'.\n", paths.Source)
 			log.Infof("* Local destination: '%s'.\n", paths.Destination)
-			log.Infof("Pulled %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
+			log.Infof("Pulled %d %s. Total of %s\n", stats.FileCount, pluralize(stats.FileCount, "file", "files"), formatBytes(stats.TotalSize))
 		},
 	}
 
@@ -131,7 +130,7 @@ func NewPullProjectCmd() *cobra.Command {
 			log.Info("Successfully pulled artifact for current project.\n")
 			log.Infof("* Remote source: '%s'.\n", paths.Source)
 			log.Infof("* Local destination: '%s'.\n", paths.Destination)
-			log.Infof("Pulled %d files. Total of %s\n", stats.FileCount, formatBytes(stats.TotalSize))
+			log.Infof("Pulled %d %s. Total of %s\n", stats.FileCount, pluralize(stats.FileCount, "file", "files"), formatBytes(stats.TotalSize))
 		},
 	}
 
@@ -141,19 +140,6 @@ func NewPullProjectCmd() *cobra.Command {
 	return cmd
 }
 
-// formatBytes converts bytes to human readable format
-func formatBytes(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
-	}
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
-}
 
 func init() {
 	rootCmd.AddCommand(pullCmd)

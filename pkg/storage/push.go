@@ -18,6 +18,11 @@ type PushOptions struct {
 	Force               bool
 }
 
+type PushStats struct {
+	FileCount int
+	TotalSize int64
+}
+
 func (o *PushOptions) RequestType() hub.GenerateSignedURLsRequestType {
 	if o.Force {
 		return hub.GenerateSignedURLsRequestPUSHFORCE
@@ -26,10 +31,10 @@ func (o *PushOptions) RequestType() hub.GenerateSignedURLsRequestType {
 	return hub.GenerateSignedURLsRequestPUSH
 }
 
-func Push(hubClient *hub.Client, resolver *files.PathResolver, options PushOptions) (*files.ResolvedPath, error) {
+func Push(hubClient *hub.Client, resolver *files.PathResolver, options PushOptions) (*files.ResolvedPath, *PushStats, error) {
 	paths, err := resolver.Resolve(files.OperationPush, options.SourcePath, options.DestinationOverride)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	log.Debug("Pushing...\n")
@@ -39,25 +44,25 @@ func Push(hubClient *hub.Client, resolver *files.PathResolver, options PushOptio
 
 	artifacts, err := LocateArtifacts(paths)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	response, err := hubClient.GenerateSignedURLs(api.RemotePaths(artifacts), options.RequestType())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	err = attachURLs(artifacts, response.Urls, options.Force)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	err = doPush(options.Force, artifacts, response.Urls)
+	stats, err := doPush(artifacts)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return paths, nil
+	return paths, stats, nil
 }
 
 func LocateArtifacts(paths *files.ResolvedPath) ([]*api.Artifact, error) {
@@ -131,16 +136,30 @@ func attachURLs(items []*api.Artifact, signedURLs []*api.SignedURL, force bool) 
 	return nil
 }
 
-func doPush(force bool, artifacts []*api.Artifact, signedURLs []*api.SignedURL) error {
+func doPush(artifacts []*api.Artifact) (*PushStats, error) {
 	client := newHTTPClient()
+	stats := &PushStats{}
 
 	for _, artifact := range artifacts {
+		fileInfo, err := os.Stat(artifact.LocalPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to stat '%s': %v", artifact.LocalPath, err)
+		}
+
 		for _, signedURL := range artifact.URLs {
 			if err := signedURL.Follow(client, artifact); err != nil {
-				return err
+				return nil, err
+			}
+		}
+
+		for _, url := range artifact.URLs {
+			if url.Method == "PUT" {
+				stats.FileCount++
+				stats.TotalSize += fileInfo.Size()
+				break
 			}
 		}
 	}
 
-	return nil
+	return stats, nil
 }
