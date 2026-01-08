@@ -2,8 +2,20 @@ version: v1.0
 name: Pipeline
 agent:
   machine:
-    type: e2-standard-2
-    os_image: ubuntu2004
+    type: f1-standard-2
+    os_image: ubuntu2404
+global_job_config:
+  epilogue:
+    always:
+      commands:
+        - 'if [ -f out/docker-scan-junit.xml ]; then test-results --name "Docker scan" --suite-prefix "[$SEMAPHORE_BLOCK_NAME]" publish out/docker-scan-junit.xml; fi'
+        - 'if [ -f out/dependency-scan-junit.xml ]; then test-results --name "Dependency scan" --suite-prefix "[$SEMAPHORE_BLOCK_NAME]" publish out/dependency-scan-junit.xml; fi'
+        - 'if [ -f out/gosec-junit.xml ]; then test-results --name "Security scan" --suite-prefix "[$SEMAPHORE_BLOCK_NAME]" publish out/gosec-junit.xml; fi'
+        - 'if [ -f out/test-reports.xml ]; then test-results --name "$SEMAPHORE_BLOCK_NAME" publish out/test-reports.xml; fi'
+        - 'if [ -f out/docker-scan-trivy.json ]; then CHECK_TYPE=docker make check.generate-report; fi'
+        - 'if [ -f out/dependency-scan-trivy.json ]; then CHECK_TYPE=deps make check.generate-report; fi'
+        - 'if [ -f out/security-export.json ]; then artifact push workflow out/security-export.json -d scans/$SEMAPHORE_JOB_ID.json; fi'
+        - 'if [ -f out/security-summary.md ]; then artifact push job out/security-summary.md -d .semaphore/REPORT.md; fi'
 blocks:
   - name: "Security checks"
     task:
@@ -14,10 +26,6 @@ blocks:
           - checkout
           - mv ~/.ssh/security-toolbox ~/.ssh/id_rsa
           - sudo chmod 600 ~/.ssh/id_rsa
-      epilogue:
-        always:
-          commands:
-            - if [ -f results.xml ]; then test-results publish results.xml; fi
       jobs:
         - name: Check dependencies
           commands:
@@ -42,6 +50,21 @@ blocks:
         always:
           commands:
             - test-results publish junit-report.xml
+
+after_pipeline:
+  task:
+    jobs:
+      - name: Submit Reports
+        commands:
+          - test-results gen-pipeline-report
+      - name: Process Reports
+        commands:
+          - sem-version ruby 3.3
+          - checkout
+          - artifact pull workflow scans -d reports || echo "No scan reports found, skipping."
+          - mkdir -p out
+          - make check.generate-global-report
+          - 'if [ -f out/global-security-summary.md ]; then artifact push workflow out/global-security-summary.md -d .semaphore/REPORT.md; fi'
 
 promotions:
   - name: "Release"
