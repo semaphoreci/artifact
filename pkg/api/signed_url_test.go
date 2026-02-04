@@ -14,6 +14,13 @@ func Test__GetObject(t *testing.T) {
 		assert.Equal(t, "artifacts/project/projectid/myfile.txt", obj)
 	})
 
+	t.Run("GCS - file with plus", func(t *testing.T) {
+		signedURL := SignedURL{URL: "https://storage.googleapis.com/my-bucket1/artifacts/project/projectid/test_art%2Bifact.txt?Expires=231256754712"}
+		obj, err := signedURL.GetObject()
+		assert.Nil(t, err)
+		assert.Equal(t, "artifacts/project/projectid/test_art+ifact.txt", obj)
+	})
+
 	t.Run("GCS - file inside directory", func(t *testing.T) {
 		signedURL := SignedURL{URL: "https://storage.googleapis.com/my-bucket1/artifacts/project/projectid/mydir/myfile.txt?Expires=231256754712"}
 		obj, err := signedURL.GetObject()
@@ -26,6 +33,13 @@ func Test__GetObject(t *testing.T) {
 		obj, err := signedURL.GetObject()
 		assert.Nil(t, err)
 		assert.Equal(t, "artifacts/project/projectid/myfile.txt", obj)
+	})
+
+	t.Run("S3 - file with plus", func(t *testing.T) {
+		signedURL := SignedURL{URL: "https://my-bucket1.s3.us-east-1.amazonaws.com/projectid/artifacts/project/projectid/test_art%2Bifact.txt?X-Amz-Whatever"}
+		obj, err := signedURL.GetObject()
+		assert.Nil(t, err)
+		assert.Equal(t, "artifacts/project/projectid/test_art+ifact.txt", obj)
 	})
 
 	t.Run("S3 with region-less URL - file", func(t *testing.T) {

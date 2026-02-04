@@ -212,27 +212,40 @@ func (u *SignedURL) delete(client *retryablehttp.Client, artifact *Artifact) err
 func (u *SignedURL) GetObject() (string, error) {
 	URL, _ := url.Parse(u.URL)
 
+	var obj string
+	var err error
 	switch host := URL.Host; {
 	case host == "storage.googleapis.com":
 		log.Debugf("Parsing GCS URL: %s\n", u.URL)
-		return parseGoogleStorageURL(URL)
+		obj, err = parseGoogleStorageURL(URL)
 
 	case strings.HasSuffix(host, "amazonaws.com"):
 		log.Debugf("Parsing S3 URL: %s\n", u.URL)
-		return parseS3URL(URL)
+		obj, err = parseS3URL(URL)
 
 	case strings.HasPrefix(host, "127.0.0.1"):
 		log.Debugf("Parsing localhost URL: %s\n", u.URL)
-		return parseLocalhostURL(URL)
+		obj, err = parseLocalhostURL(URL)
 
 	case customDomainRegex.Match([]byte(URL.String())):
 		log.Debugf("Parsing custom domain URL: %s\n", u.URL)
-		return parseCustomDomainURL(URL)
+		obj, err = parseCustomDomainURL(URL)
 
 	default:
 		log.Warnf("Failed to parse URL '%s' - unrecognized host '%s'\n", u.URL, host)
 		return "", fmt.Errorf("unrecognized host %s", host)
 	}
+
+	if err != nil {
+		return "", err
+	}
+
+	decoded, err := url.PathUnescape(obj)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode object path '%s': %v", obj, err)
+	}
+
+	return decoded, nil
 }
 
 // GCS URLs follow the format 'https://storage.googleapis.com/<bucket-name>/<path>'
@@ -280,5 +293,5 @@ func parseCustomDomainURL(URL *url.URL) (string, error) {
 // Localhost URLs are used during tests
 func parseLocalhostURL(URL *url.URL) (string, error) {
 	// we don't want the leading slash
-	return URL.Path[1:], nil
+	return strings.TrimPrefix(URL.EscapedPath(), "/"), nil
 }
