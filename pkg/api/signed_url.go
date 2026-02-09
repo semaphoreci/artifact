@@ -210,10 +210,12 @@ func (u *SignedURL) delete(client *retryablehttp.Client, artifact *Artifact) err
 }
 
 func (u *SignedURL) GetObject() (string, error) {
-	URL, _ := url.Parse(u.URL)
+	URL, err := url.Parse(u.URL)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse URL '%s': %v", u.URL, err)
+	}
 
 	var obj string
-	var err error
 	switch host := URL.Host; {
 	case host == "storage.googleapis.com":
 		log.Debugf("Parsing GCS URL: %s\n", u.URL)

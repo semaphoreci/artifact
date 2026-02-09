@@ -61,8 +61,8 @@ func buildArtifacts(signedURLs []*api.SignedURL, paths *files.ResolvedPath, forc
 			return nil, err
 		}
 
-		relative := strings.TrimPrefix(obj, paths.Source)
-		if relative == obj {
+		relative, ok := objectRelativeToSource(obj, paths.Source)
+		if !ok {
 			return nil, fmt.Errorf("failed to resolve local path: remote object '%s' does not match source '%s'", obj, paths.Source)
 		}
 		localPath := path.Join(paths.Destination, relative)
@@ -81,6 +81,19 @@ func buildArtifacts(signedURLs []*api.SignedURL, paths *files.ResolvedPath, forc
 	}
 
 	return artifacts, nil
+}
+
+func objectRelativeToSource(object, source string) (string, bool) {
+	if object == source {
+		return "", true
+	}
+
+	sourcePrefix := strings.TrimSuffix(source, "/") + "/"
+	if strings.HasPrefix(object, sourcePrefix) {
+		return strings.TrimPrefix(object, sourcePrefix), true
+	}
+
+	return "", false
 }
 
 func doPull(artifacts []*api.Artifact) (*PullStats, error) {
